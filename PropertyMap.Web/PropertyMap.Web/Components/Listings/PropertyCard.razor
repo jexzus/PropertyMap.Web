@@ -1,0 +1,96 @@
+@using PropertyMap.Core.Entities
+@using PropertyMap.Core.Enums
+
+<div class="property-card @(IsSelected ? "selected" : "")" @onclick="HandleClick" role="button" tabindex="0"
+     @onkeydown="HandleKeyDown" aria-label="@Listing.Titulo, @Listing.Moneda @Listing.Precio.ToString("N0")">
+
+    @if (Listing.Fotos.Count > 0)
+    {
+        <img class="card-photo" src="@Listing.Fotos[0]" alt="@Listing.Titulo" loading="lazy" />
+    }
+    else
+    {
+        <div class="card-photo-placeholder" aria-hidden="true">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+            </svg>
+        </div>
+    }
+
+    <div class="card-body">
+        <div class="card-price" aria-label="Precio: @Listing.Moneda @Listing.Precio.ToString("N0")">
+            @Listing.Moneda @Listing.Precio.ToString("N0")
+        </div>
+
+        <div class="card-badges">
+            <span class="badge badge-operacion">@OperacionLabel</span>
+            <span class="badge badge-tipo">@Listing.TipoPropiedad</span>
+        </div>
+
+        @if (Listing.Location is not null)
+        {
+            <div class="card-address">@Listing.Location.DireccionTexto</div>
+        }
+
+        @if (HasStats)
+        {
+            <div class="card-stats">
+                @if (Listing.Superficie.HasValue)
+                {
+                    <span class="card-stat">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                        @Listing.Superficie m²
+                    </span>
+                }
+                @if (Listing.Ambientes.HasValue)
+                {
+                    <span class="card-stat">@Listing.Ambientes amb.</span>
+                }
+                @if (Listing.Dormitorios.HasValue)
+                {
+                    <span class="card-stat">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8"/><path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/></svg>
+                        @Listing.Dormitorios dorm.
+                    </span>
+                }
+                @if (Listing.Banos.HasValue)
+                {
+                    <span class="card-stat">@Listing.Banos ba.</span>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="card-footer">
+        <span class="card-publisher">@(Listing.Publisher?.Nombre ?? "")</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <polyline points="9 18 15 12 9 6"/>
+        </svg>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PropertyListing Listing { get; set; } = null!;
+    [Parameter] public bool IsSelected { get; set; }
+    [Parameter] public EventCallback<int> OnSelect { get; set; }
+
+    private string OperacionLabel => Listing.Operacion switch
+    {
+        TipoOperacion.Venta             => "Venta",
+        TipoOperacion.Alquiler          => "Alquiler",
+        TipoOperacion.AlquilerTemporario => "Temporario",
+        _                               => Listing.Operacion.ToString()
+    };
+
+    private bool HasStats =>
+        Listing.Superficie.HasValue || Listing.Ambientes.HasValue ||
+        Listing.Dormitorios.HasValue || Listing.Banos.HasValue;
+
+    private async Task HandleClick() => await OnSelect.InvokeAsync(Listing.Id);
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is "Enter" or " ")
+            await OnSelect.InvokeAsync(Listing.Id);
+    }
+}

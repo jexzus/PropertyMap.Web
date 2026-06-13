@@ -1,0 +1,108 @@
+@using PropertyMap.Core.DTOs
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="map-wrapper" id="map-wrapper">
+    <div id="pm-map" style="width:100%;height:100%"></div>
+
+    @if (popupListingIds.Any())
+    {
+        <div class="map-popup" role="dialog" aria-label="Propiedades en esta ubicación">
+            <div class="map-popup-header">
+                <span class="map-popup-title">
+                    @(popupListingIds.Count == 1 ? "1 propiedad" : $"{popupListingIds.Count} propiedades aquí")
+                </span>
+                <button class="btn-close-popup" @onclick="ClosePopup" aria-label="Cerrar">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            @foreach (var id in popupListingIds)
+            {
+                var listing = Listings.FirstOrDefault(l => l.Id == id);
+                if (listing is null) continue;
+                <div class="map-popup-item" @onclick="() => SelectFromPopup(id)" role="button" tabindex="0">
+                    <div class="popup-item-price">@listing.Moneda @listing.Precio.ToString("N0")</div>
+                    <div class="popup-item-meta">@listing.TipoPropiedad · @listing.Operacion</div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public IEnumerable<ListingMapDto> Listings { get; set; } = [];
+    [Parameter] public int? SelectedListingId { get; set; }
+    [Parameter] public EventCallback<int> OnListingSelected { get; set; }
+
+    private DotNetObjectReference<MapView>? dotNetRef;
+    private List<int> popupListingIds = [];
+    private bool mapInitialized;
+    private IEnumerable<ListingMapDto> previousListings = [];
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            dotNetRef = DotNetObjectReference.Create(this);
+            // Buenos Aires como centro por defecto
+            await JS.InvokeVoidAsync("mapInterop.initMap", "pm-map", -34.6037, -58.3816, 13);
+            await JS.InvokeVoidAsync("mapInterop.centerOnUser");
+            await JS.InvokeVoidAsync("mapInterop.initResize", "#listings-panel", "#resize-handle");
+            mapInitialized = true;
+            await UpdateMarkers();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!mapInitialized) return;
+
+        if (!ReferenceEquals(Listings, previousListings))
+        {
+            previousListings = Listings;
+            await UpdateMarkers();
+        }
+
+        if (SelectedListingId.HasValue)
+            await JS.InvokeVoidAsync("mapInterop.selectMarker", SelectedListingId.Value);
+    }
+
+    private async Task UpdateMarkers()
+    {
+        if (!mapInitialized) return;
+        await JS.InvokeVoidAsync("mapInterop.setMarkers", Listings, dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task OnMarkerClick(List<int> ids)
+    {
+        popupListingIds = ids;
+        if (ids.Count == 1)
+        {
+            await OnListingSelected.InvokeAsync(ids[0]);
+            popupListingIds = [];
+        }
+        StateHasChanged();
+    }
+
+    private async Task SelectFromPopup(int id)
+    {
+        popupListingIds = [];
+        await OnListingSelected.InvokeAsync(id);
+    }
+
+    private void ClosePopup() => popupListingIds = [];
+
+    public async ValueTask DisposeAsync()
+    {
+        dotNetRef?.Dispose();
+        if (mapInitialized)
+        {
+            try { await JS.InvokeVoidAsync("mapInterop.clearMarkers"); }
+            catch (JSDisconnectedException) { }
+            catch (TaskCanceledException) { }
+        }
+    }
+}

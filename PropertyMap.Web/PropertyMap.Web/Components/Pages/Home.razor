@@ -1,0 +1,208 @@
+@page "/"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@using PropertyMap.Core.Entities
+@using PropertyMap.Core.Enums
+@using PropertyMap.Core.Interfaces
+@using PropertyMap.Core.DTOs
+@inject IListingRepository ListingRepo
+@rendermode InteractiveServer
+
+<PageTitle>PropertyMap — Propiedades en el mapa</PageTitle>
+
+<div class="app-shell">
+
+    @* ── Navbar ──────────────────────────────────────────────────────────── *@
+    <nav class="pm-navbar" role="navigation" aria-label="Navegación principal">
+        <a href="/" class="pm-navbar__logo" aria-label="PropertyMap — Inicio">
+            PropertyMap
+        </a>
+
+        <div class="pm-navbar__filters" role="group" aria-label="Filtros de búsqueda">
+            @* Operación *@
+            <div class="filter-group" role="group" aria-label="Tipo de operación">
+                <button class="filter-chip @(filtroOperacion == "" ? "active" : "")"
+                        @onclick='() => SetOperacion("")'
+                        aria-pressed="@(filtroOperacion == "")">
+                    Todas
+                </button>
+                <button class="filter-chip @(filtroOperacion == "Venta" ? "active" : "")"
+                        @onclick='() => SetOperacion("Venta")'
+                        aria-pressed="@(filtroOperacion == "Venta")">
+                    Venta
+                </button>
+                <button class="filter-chip @(filtroOperacion == "Alquiler" ? "active" : "")"
+                        @onclick='() => SetOperacion("Alquiler")'
+                        aria-pressed="@(filtroOperacion == "Alquiler")">
+                    Alquiler
+                </button>
+                <button class="filter-chip @(filtroOperacion == "AlquilerTemporario" ? "active" : "")"
+                        @onclick='() => SetOperacion("AlquilerTemporario")'
+                        aria-pressed="@(filtroOperacion == "AlquilerTemporario")">
+                    Temporario
+                </button>
+            </div>
+
+            @* Tipo de propiedad *@
+            <select class="filter-select @(!string.IsNullOrEmpty(filtroTipo) ? "has-value" : "")"
+                    @bind="filtroTipo" @bind:after="ApplyFilters"
+                    aria-label="Tipo de propiedad">
+                <option value="">Tipo de propiedad</option>
+                @foreach (var tipo in Enum.GetValues<TipoPropiedad>())
+                {
+                    <option value="@tipo">@tipo</option>
+                }
+            </select>
+
+            @* Precio máximo *@
+            <select class="filter-select @(filtroMaxPrecio.HasValue ? "has-value" : "")"
+                    @bind="filtroMaxPrecioStr" @bind:after="ApplyFilters"
+                    aria-label="Precio máximo">
+                <option value="">Precio máx.</option>
+                <option value="50000">USD 50.000</option>
+                <option value="100000">USD 100.000</option>
+                <option value="200000">USD 200.000</option>
+                <option value="500000">USD 500.000</option>
+                <option value="1000000">USD 1.000.000</option>
+            </select>
+
+            @* Ambientes *@
+            <select class="filter-select @(filtroAmbientes.HasValue ? "has-value" : "")"
+                    @bind="filtroAmbientesStr" @bind:after="ApplyFilters"
+                    aria-label="Cantidad de ambientes">
+                <option value="">Ambientes</option>
+                <option value="1">1 amb.</option>
+                <option value="2">2 amb.</option>
+                <option value="3">3 amb.</option>
+                <option value="4">4+ amb.</option>
+            </select>
+        </div>
+
+        <div class="pm-navbar__actions">
+            <AuthorizeView>
+                <Authorized>
+                    <a href="/publisher/dashboard" class="btn-ghost">Mi panel</a>
+                </Authorized>
+                <NotAuthorized>
+                    <a href="/Account/Login" class="btn-ghost">Ingresar</a>
+                    <a href="/Account/Register" class="btn-primary">Publicar</a>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+    </nav>
+
+    @if (loadError is not null)
+    {
+        <div style="padding:2rem;color:red;font-family:monospace">Error: @loadError</div>
+    }
+
+    @* ── Split Layout ────────────────────────────────────────────────────── *@
+    <div class="split-layout">
+
+        @* Panel de listados *@
+        <ListingsPanel
+            Listings="filteredListings"
+            SelectedListingId="selectedListingId"
+            IsCollapsed="isPanelCollapsed"
+            IsLoading="isLoading"
+            OnListingSelected="SelectListing"
+            OnToggleCollapse="TogglePanel" />
+
+        @* Handle de resize *@
+        @if (!isPanelCollapsed)
+        {
+            <div id="resize-handle" class="resize-handle" role="separator" aria-label="Redimensionar panel" aria-orientation="vertical"></div>
+        }
+
+        @* Mapa *@
+        <div style="position:relative;flex:1;overflow:hidden">
+            @if (isPanelCollapsed)
+            {
+                <button class="btn-panel-toggle" @onclick="TogglePanel" aria-label="Mostrar listado de propiedades">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <polyline points="9 18 15 12 9 6"/>
+                    </svg>
+                    @filteredListings.Count prop.
+                </button>
+            }
+            <MapView
+                Listings="mapListings"
+                SelectedListingId="selectedListingId"
+                OnListingSelected="SelectListing" />
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<PropertyListing> allListings = [];
+    private List<PropertyListing> filteredListings = [];
+    private List<ListingMapDto> mapListings = [];
+    private string? loadError;
+
+    private string filtroOperacion = "";
+    private string filtroTipo = "";
+    private string filtroMaxPrecioStr = "";
+    private string filtroAmbientesStr = "";
+    private decimal? filtroMaxPrecio;
+    private int? filtroAmbientes;
+
+    private int? selectedListingId;
+    private bool isPanelCollapsed;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            isLoading = true;
+            allListings = (await ListingRepo.GetActiveListingsAsync()).ToList();
+            mapListings  = (await ListingRepo.GetActiveListingsForMapAsync()).ToList();
+            filteredListings = allListings;
+        }
+        catch (Exception ex)
+        {
+            loadError = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void SetOperacion(string op)
+    {
+        filtroOperacion = op;
+        ApplyFilters();
+    }
+
+    private void ApplyFilters()
+    {
+        filtroMaxPrecio  = decimal.TryParse(filtroMaxPrecioStr, out var p) ? p : null;
+        filtroAmbientes  = int.TryParse(filtroAmbientesStr, out var a) ? a : null;
+
+        filteredListings = allListings
+            .Where(l => string.IsNullOrEmpty(filtroOperacion) || l.Operacion.ToString() == filtroOperacion)
+            .Where(l => string.IsNullOrEmpty(filtroTipo)      || l.TipoPropiedad.ToString() == filtroTipo)
+            .Where(l => !filtroMaxPrecio.HasValue              || l.Precio <= filtroMaxPrecio)
+            .Where(l => !filtroAmbientes.HasValue              || (l.Ambientes.HasValue && l.Ambientes >= filtroAmbientes))
+            .ToList();
+
+        // Sincronizar markers del mapa con los listados filtrados
+        var filteredIds = filteredListings.Select(l => l.Id).ToHashSet();
+        mapListings = allListings
+            .Where(l => filteredIds.Contains(l.Id))
+            .Select(l => new ListingMapDto(
+                l.Id, l.Location.Latitud, l.Location.Longitud,
+                l.Titulo, l.Precio, l.Moneda,
+                l.TipoPropiedad.ToString(), l.Operacion.ToString(),
+                l.Fotos.FirstOrDefault()
+            )).ToList();
+    }
+
+    private void SelectListing(int id)
+    {
+        selectedListingId = selectedListingId == id ? null : id;
+    }
+
+    private void TogglePanel() => isPanelCollapsed = !isPanelCollapsed;
+}
