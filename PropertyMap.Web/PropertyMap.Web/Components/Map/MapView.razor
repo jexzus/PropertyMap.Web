@@ -5,28 +5,29 @@
 <div class="map-wrapper" id="map-wrapper">
     <div id="pm-map" style="width:100%;height:100%"></div>
 
-    @if (popupListingIds.Any())
+    @if (popupListing is not null)
     {
-        <div class="map-popup" role="dialog" aria-label="Propiedades en esta ubicación">
-            <div class="map-popup-header">
-                <span class="map-popup-title">
-                    @(popupListingIds.Count == 1 ? "1 propiedad" : $"{popupListingIds.Count} propiedades aquí")
-                </span>
-                <button class="btn-close-popup" @onclick="ClosePopup" aria-label="Cerrar">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                </button>
-            </div>
-            @foreach (var id in popupListingIds)
+        <div class="map-card-popup" role="dialog" aria-label="@popupListing.Titulo">
+            <button class="map-popup-close" @onclick="ClosePopup" aria-label="Cerrar">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+
+            @if (!string.IsNullOrEmpty(popupListing.FotoUrl))
             {
-                var listing = Listings.FirstOrDefault(l => l.Id == id);
-                if (listing is null) continue;
-                <div class="map-popup-item" @onclick="() => SelectFromPopup(id)" role="button" tabindex="0">
-                    <div class="popup-item-price">@listing.Moneda @listing.Precio.ToString("N0")</div>
-                    <div class="popup-item-meta">@listing.TipoPropiedad · @listing.Operacion</div>
-                </div>
+                <img class="map-popup-photo" src="@popupListing.FotoUrl" alt="@popupListing.Titulo" loading="lazy" />
             }
+
+            <div class="map-popup-body">
+                <div class="map-popup-price">@FormatPrice(popupListing)</div>
+                <div class="map-popup-title">@popupListing.Titulo</div>
+                <div class="map-popup-meta">@popupListing.TipoPropiedad · @popupListing.Operacion</div>
+                <a class="map-popup-cta" href="/property/@popupListing.Id" target="_blank">
+                    Ver detalle
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                </a>
+            </div>
         </div>
     }
 </div>
@@ -37,7 +38,7 @@
     [Parameter] public EventCallback<int> OnListingSelected { get; set; }
 
     private DotNetObjectReference<MapView>? dotNetRef;
-    private List<int> popupListingIds = [];
+    private ListingMapDto? popupListing;
     private bool mapInitialized;
     private IEnumerable<ListingMapDto> previousListings = [];
 
@@ -46,8 +47,7 @@
         if (firstRender)
         {
             dotNetRef = DotNetObjectReference.Create(this);
-            // Buenos Aires como centro por defecto
-            await JS.InvokeVoidAsync("mapInterop.initMap", "pm-map", -34.6037, -58.3816, 13);
+            await JS.InvokeVoidAsync("mapInterop.initMap", "pm-map", -36.6200, -64.2895, 13);
             await JS.InvokeVoidAsync("mapInterop.centerOnUser");
             await JS.InvokeVoidAsync("mapInterop.initResize", "#listings-panel", "#resize-handle");
             mapInitialized = true;
@@ -75,25 +75,28 @@
         await JS.InvokeVoidAsync("mapInterop.setMarkers", Listings, dotNetRef);
     }
 
+    public async Task HighlightMarker(int? id)
+    {
+        if (!mapInitialized) return;
+        await JS.InvokeVoidAsync("mapInterop.highlightMarker", id.HasValue ? (object)id.Value : null);
+    }
+
     [JSInvokable]
     public async Task OnMarkerClick(List<int> ids)
     {
-        popupListingIds = ids;
-        if (ids.Count == 1)
-        {
-            await OnListingSelected.InvokeAsync(ids[0]);
-            popupListingIds = [];
-        }
+        var id = ids.FirstOrDefault();
+        popupListing = Listings.FirstOrDefault(l => l.Id == id);
+        await OnListingSelected.InvokeAsync(id);
         StateHasChanged();
     }
 
-    private async Task SelectFromPopup(int id)
-    {
-        popupListingIds = [];
-        await OnListingSelected.InvokeAsync(id);
-    }
+    private void ClosePopup() => popupListing = null;
 
-    private void ClosePopup() => popupListingIds = [];
+    private static string FormatPrice(ListingMapDto l)
+    {
+        var sym = l.Moneda == "USD" ? "U$S" : "$";
+        return $"{sym} {l.Precio:N0}";
+    }
 
     public async ValueTask DisposeAsync()
     {

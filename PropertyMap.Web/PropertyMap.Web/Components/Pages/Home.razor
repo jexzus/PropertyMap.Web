@@ -103,9 +103,11 @@
         <ListingsPanel
             Listings="filteredListings"
             SelectedListingId="selectedListingId"
+            HoveredListingId="hoveredListingId"
             IsCollapsed="isPanelCollapsed"
             IsLoading="isLoading"
             OnListingSelected="SelectListing"
+            OnListingHover="HoverListing"
             OnToggleCollapse="TogglePanel" />
 
         @* Handle de resize *@
@@ -125,7 +127,7 @@
                     @filteredListings.Count prop.
                 </button>
             }
-            <MapView
+            <MapView @ref="mapView"
                 Listings="mapListings"
                 SelectedListingId="selectedListingId"
                 OnListingSelected="SelectListing" />
@@ -147,8 +149,10 @@
     private int? filtroAmbientes;
 
     private int? selectedListingId;
+    private int? hoveredListingId;
     private bool isPanelCollapsed;
     private bool isLoading = true;
+    private MapView? mapView;
 
     protected override async Task OnInitializedAsync()
     {
@@ -202,6 +206,13 @@
     private void SelectListing(int id)
     {
         selectedListingId = selectedListingId == id ? null : id;
+    }
+
+    private async Task HoverListing(int? id)
+    {
+        hoveredListingId = id;
+        if (mapView is not null)
+            await mapView.HighlightMarker(id);
     }
 
     private void TogglePanel() => isPanelCollapsed = !isPanelCollapsed;

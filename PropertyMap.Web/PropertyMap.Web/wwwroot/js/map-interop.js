@@ -62,12 +62,25 @@ window.mapInterop = {
     });
   },
 
-  // ── Resaltar marker seleccionado ───────────────────────────────────────────
+  // ── Resaltar marker seleccionado (click) ──────────────────────────────────
   selectMarker(id) {
     this._selectedId = id;
     this._markers.forEach(({ marker }, markerId) => {
       const el = marker.getElement();
       if (el) el.classList.toggle('selected', markerId === id);
+    });
+  },
+
+  // ── Highlight marker desde hover de card ──────────────────────────────────
+  highlightMarker(id) {
+    this._markers.forEach(({ marker }, markerId) => {
+      const el = marker.getElement();
+      if (!el) return;
+      if (id === null || id === undefined) {
+        el.classList.remove('hovered');
+      } else {
+        el.classList.toggle('hovered', markerId === id);
+      }
     });
   },
 

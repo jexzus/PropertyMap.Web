@@ -55,7 +55,9 @@
                     <PropertyCard
                         Listing="listing"
                         IsSelected="@(SelectedListingId == listing.Id)"
-                        OnSelect="OnListingSelected" />
+                        IsHighlighted="@(HoveredListingId == listing.Id)"
+                        OnSelect="OnListingSelected"
+                        OnHover="OnListingHover" />
                 }
             }
         </div>
@@ -65,8 +67,10 @@
 @code {
     [Parameter, EditorRequired] public List<PropertyListing> Listings { get; set; } = [];
     [Parameter] public int? SelectedListingId { get; set; }
+    [Parameter] public int? HoveredListingId { get; set; }
     [Parameter] public bool IsCollapsed { get; set; }
     [Parameter] public bool IsLoading { get; set; }
     [Parameter] public EventCallback<int> OnListingSelected { get; set; }
+    [Parameter] public EventCallback<int?> OnListingHover { get; set; }
     [Parameter] public EventCallback OnToggleCollapse { get; set; }
 }
