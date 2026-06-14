@@ -485,6 +485,39 @@ html, body {
   gap: 3px;
 }
 
+/* ─── Map Style Toggle ───────────────────────────────────────────────────── */
+.map-style-toggle {
+  position: absolute;
+  bottom: 120px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: white;
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  z-index: 10;
+}
+.style-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 150ms, color 150ms;
+  font-family: inherit;
+}
+.style-btn:hover  { background: #f3f4f6; color: #111827; }
+.style-btn.active { background: #2563eb; color: white; }
+
 /* ─── Map Card Popup ─────────────────────────────────────────────────────── */
 .map-card-popup {
   position: absolute;

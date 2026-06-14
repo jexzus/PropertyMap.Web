@@ -5,6 +5,25 @@
 <div class="map-wrapper" id="map-wrapper">
     <div id="pm-map" style="width:100%;height:100%"></div>
 
+    <div class="map-style-toggle">
+        <button class="style-btn @(!isSatellite ? "active" : "")"
+                @onclick='() => ToggleStyle(false)'
+                title="Vista de calles">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+            </svg>
+            Calle
+        </button>
+        <button class="style-btn @(isSatellite ? "active" : "")"
+                @onclick='() => ToggleStyle(true)'
+                title="Vista satelital">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+            </svg>
+            Satélite
+        </button>
+    </div>
+
     @if (popupListing is not null)
     {
         <div class="map-card-popup" role="dialog" aria-label="@popupListing.Titulo">
@@ -36,8 +55,10 @@
     [Parameter] public IEnumerable<ListingMapDto> Listings { get; set; } = [];
     [Parameter] public int? SelectedListingId { get; set; }
     [Parameter] public EventCallback<int> OnListingSelected { get; set; }
+    [Parameter] public EventCallback<int?> OnMarkerHovered { get; set; }
 
     private DotNetObjectReference<MapView>? dotNetRef;
+    private bool isSatellite;
     private ListingMapDto? popupListing;
     private bool mapInitialized;
     private IEnumerable<ListingMapDto> previousListings = [];
@@ -79,6 +100,22 @@
     {
         if (!mapInitialized) return;
         await JS.InvokeVoidAsync("mapInterop.highlightMarker", id.HasValue ? (object)id.Value : null);
+    }
+
+    private async Task ToggleStyle(bool satellite)
+    {
+        isSatellite = satellite;
+        var style = satellite
+            ? "mapbox://styles/mapbox/satellite-streets-v12"
+            : "mapbox://styles/mapbox/streets-v12";
+        await JS.InvokeVoidAsync("mapInterop.setStyle", style);
+    }
+
+    [JSInvokable]
+    public async Task OnMarkerHover(int id)
+    {
+        var hoveredId = id == -1 ? (int?)null : id;
+        await OnMarkerHovered.InvokeAsync(hoveredId);
     }
 
     [JSInvokable]
