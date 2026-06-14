@@ -8,12 +8,12 @@
     <div class="pm-navbar__actions">
         <AuthorizeView>
             <Authorized>
-                <AuthorizeView Roles="Publisher">
-                    <Authorized>
+                <AuthorizeView Roles="Publisher" Context="publisherCtx">
+                    <Authorized Context="pAuth">
                         <a href="/publisher/dashboard" class="btn-ghost">Mi panel</a>
                         <a href="/publisher/dashboard" class="btn-primary">Publicar</a>
                     </Authorized>
-                    <NotAuthorized>
+                    <NotAuthorized Context="pNotAuth">
                         <a href="/publisher/upgrade" class="btn-ghost">Publicar</a>
                     </NotAuthorized>
                 </AuthorizeView>

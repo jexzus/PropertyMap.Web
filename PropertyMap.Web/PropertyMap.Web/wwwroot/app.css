@@ -54,6 +54,78 @@ html, body {
   flex-shrink: 0;
 }
 
+/* ─── Filter Bar ─────────────────────────────────────────────────────────── */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  position: sticky;
+  top: var(--navbar-h);
+  z-index: calc(var(--z-filters) - 1);
+}
+
+.filter-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 180px;
+  max-width: 320px;
+}
+
+.filter-search-icon {
+  position: absolute;
+  left: 10px;
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.filter-search-input {
+  width: 100%;
+  padding: 8px 32px 8px 34px;
+  font-size: 13px;
+  font-family: inherit;
+  border: 1.5px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  outline: none;
+  transition: border-color 150ms;
+}
+.filter-search-input:focus { border-color: var(--color-primary); }
+
+.filter-search-clear {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.filter-clear-btn {
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  background: none;
+  border: 1.5px solid var(--color-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 150ms;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.filter-clear-btn:hover { border-color: #6b7280; color: var(--color-ink); }
+
 /* ─── Filter Chips ───────────────────────────────────────────────────────── */
 .filter-group {
   display: flex;
@@ -88,34 +160,32 @@ html, body {
 }
 
 .filter-select {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
+  padding: 8px 28px 8px 12px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
   font-family: var(--font-sans);
-  color: var(--color-ink);
+  color: #6b7280;
   background: var(--color-bg);
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239ca3af' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;
-  padding-right: 28px;
-  transition: border-color var(--dur-fast) var(--ease-out);
+  transition: border-color 150ms;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 .filter-select:focus {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 1px;
+  outline: none;
+  border-color: var(--color-primary);
 }
 .filter-select.has-value {
   border-color: var(--color-primary);
-  color: var(--color-primary);
+  color: var(--color-ink);
+  background-color: oklch(0.97 0.01 250);
 }
 
 .btn-more-filters {

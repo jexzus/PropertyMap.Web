@@ -1,0 +1,132 @@
+@using PropertyMap.Core.Enums
+@inject IJSRuntime JS
+
+<div class="filter-bar" role="search" aria-label="Filtros de búsqueda">
+
+    @* ── Búsqueda texto ── *@
+    <div class="filter-search-wrap">
+        <svg class="filter-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input class="filter-search-input"
+               type="text"
+               placeholder="Ciudad, barrio o dirección..."
+               @bind="searchText"
+               @bind:event="oninput"
+               @onkeydown="HandleSearchKey"
+               aria-label="Buscar ciudad o dirección" />
+        @if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            <button class="filter-search-clear" @onclick="ClearSearch" aria-label="Limpiar búsqueda">×</button>
+        }
+    </div>
+
+    @* ── Operación ── *@
+    <select class='filter-select @(!string.IsNullOrEmpty(Operacion) ? "has-value" : "")'
+            value="@Operacion"
+            @onchange="e => EmitOperacion(e.Value?.ToString() ?? string.Empty)"
+            aria-label="Tipo de operación">
+        <option value="">Operación</option>
+        <option value="Venta">En venta</option>
+        <option value="Alquiler">En alquiler</option>
+        <option value="AlquilerTemporario">Temporario</option>
+    </select>
+
+    @* ── Precio ── *@
+    <select class='filter-select @(!string.IsNullOrEmpty(MaxPrecio) ? "has-value" : "")'
+            value="@MaxPrecio"
+            @onchange="e => EmitMaxPrecio(e.Value?.ToString() ?? string.Empty)"
+            aria-label="Precio máximo">
+        <option value="">Precio máx.</option>
+        <option value="50000">USD 50.000</option>
+        <option value="100000">USD 100.000</option>
+        <option value="200000">USD 200.000</option>
+        <option value="500000">USD 500.000</option>
+        <option value="1000000">USD 1.000.000</option>
+    </select>
+
+    @* ── Dormitorios ── *@
+    <select class='filter-select @(Dormitorios.HasValue ? "has-value" : "")'
+            value="@(Dormitorios?.ToString() ?? string.Empty)"
+            @onchange="e => EmitDormitorios(e.Value?.ToString() ?? string.Empty)"
+            aria-label="Dormitorios">
+        <option value="">Dormitorios</option>
+        <option value="1">1 dorm.</option>
+        <option value="2">2 dorm.</option>
+        <option value="3">3 dorm.</option>
+        <option value="4">4+ dorm.</option>
+    </select>
+
+    @* ── Baños ── *@
+    <select class='filter-select @(Banos.HasValue ? "has-value" : "")'
+            value="@(Banos?.ToString() ?? string.Empty)"
+            @onchange="e => EmitBanos(e.Value?.ToString() ?? string.Empty)"
+            aria-label="Baños">
+        <option value="">Baños</option>
+        <option value="1">1 baño</option>
+        <option value="2">2 baños</option>
+        <option value="3">3+ baños</option>
+    </select>
+
+    @* ── Tipo de propiedad ── *@
+    <select class='filter-select @(!string.IsNullOrEmpty(TipoProp) ? "has-value" : "")'
+            value="@TipoProp"
+            @onchange="e => EmitTipo(e.Value?.ToString() ?? string.Empty)"
+            aria-label="Tipo de propiedad">
+        <option value="">Tipo</option>
+        @foreach (var tipo in Enum.GetValues<TipoPropiedad>())
+        {
+            <option value="@tipo">@tipo</option>
+        }
+    </select>
+
+    @* ── Limpiar filtros ── *@
+    @if (HasActiveFilters)
+    {
+        <button class="filter-clear-btn" @onclick="ClearAllFilters" aria-label="Limpiar todos los filtros">
+            Limpiar
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter] public string Operacion { get; set; } = "";
+    [Parameter] public string MaxPrecio { get; set; } = "";
+    [Parameter] public int? Dormitorios { get; set; }
+    [Parameter] public int? Banos { get; set; }
+    [Parameter] public string TipoProp { get; set; } = "";
+
+    [Parameter] public EventCallback<string> OnOperacionChanged { get; set; }
+    [Parameter] public EventCallback<string> OnMaxPrecioChanged { get; set; }
+    [Parameter] public EventCallback<int?> OnDormitoriosChanged { get; set; }
+    [Parameter] public EventCallback<int?> OnBanosChanged { get; set; }
+    [Parameter] public EventCallback<string> OnTipoChanged { get; set; }
+    [Parameter] public EventCallback OnClearAll { get; set; }
+
+    private string searchText = "";
+
+    private bool HasActiveFilters =>
+        !string.IsNullOrEmpty(Operacion) || !string.IsNullOrEmpty(MaxPrecio) ||
+        Dormitorios.HasValue || Banos.HasValue || !string.IsNullOrEmpty(TipoProp);
+
+    private async Task HandleSearchKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(searchText))
+            await JS.InvokeVoidAsync("mapInterop.geocodeAndFly", searchText);
+    }
+
+    private void ClearSearch() => searchText = "";
+
+    private async Task EmitOperacion(string v)  => await OnOperacionChanged.InvokeAsync(v);
+    private async Task EmitMaxPrecio(string v)  => await OnMaxPrecioChanged.InvokeAsync(v);
+    private async Task EmitTipo(string v)        => await OnTipoChanged.InvokeAsync(v);
+
+    private async Task EmitDormitorios(string v) =>
+        await OnDormitoriosChanged.InvokeAsync(int.TryParse(v, out var n) ? n : null);
+
+    private async Task EmitBanos(string v) =>
+        await OnBanosChanged.InvokeAsync(int.TryParse(v, out var n) ? n : null);
+
+    private async Task ClearAllFilters() => await OnClearAll.InvokeAsync();
+}
