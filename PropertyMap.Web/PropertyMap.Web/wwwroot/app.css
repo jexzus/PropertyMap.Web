@@ -28,11 +28,13 @@ html, body {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  justify-content: space-between;
   padding: 0 var(--space-5);
   background: var(--color-bg);
   border-bottom: 1px solid var(--color-border);
   z-index: var(--z-filters);
+  position: sticky;
+  top: 0;
 }
 
 .pm-navbar__logo {
@@ -42,25 +44,14 @@ html, body {
   text-decoration: none;
   letter-spacing: -0.02em;
   flex-shrink: 0;
-  margin-right: var(--space-3);
 }
-
-.pm-navbar__filters {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex: 1;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.pm-navbar__filters::-webkit-scrollbar { display: none; }
+.pm-navbar__logo:hover { opacity: 0.8; }
 
 .pm-navbar__actions {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   flex-shrink: 0;
-  margin-left: auto;
 }
 
 /* ─── Filter Chips ───────────────────────────────────────────────────────── */

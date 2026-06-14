@@ -1,0 +1,27 @@
+@using Microsoft.AspNetCore.Components.Authorization
+
+<nav class="pm-navbar" role="navigation" aria-label="Navegación principal">
+    <a href="/" class="pm-navbar__logo" aria-label="PropertyMap — Inicio">
+        PropertyMap
+    </a>
+
+    <div class="pm-navbar__actions">
+        <AuthorizeView>
+            <Authorized>
+                <AuthorizeView Roles="Publisher">
+                    <Authorized>
+                        <a href="/publisher/dashboard" class="btn-ghost">Mi panel</a>
+                        <a href="/publisher/dashboard" class="btn-primary">Publicar</a>
+                    </Authorized>
+                    <NotAuthorized>
+                        <a href="/publisher/upgrade" class="btn-ghost">Publicar</a>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </Authorized>
+            <NotAuthorized>
+                <a href="/Account/Login" class="btn-ghost">Iniciar sesión</a>
+                <a href="/Account/Register" class="btn-primary">Publicar</a>
+            </NotAuthorized>
+        </AuthorizeView>
+    </div>
+</nav>
