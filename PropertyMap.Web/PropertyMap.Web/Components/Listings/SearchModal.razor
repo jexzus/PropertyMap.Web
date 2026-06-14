@@ -1,0 +1,101 @@
+@using PropertyMap.Core.Enums
+@inject IJSRuntime JS
+
+@if (IsVisible)
+{
+    <div class="search-modal-overlay" @onclick="HandleOverlayClick" role="dialog" aria-modal="true" aria-label="Búsqueda de propiedades">
+        <div class="search-modal" @onclick:stopPropagation="true">
+
+            <button class="search-modal-close" @onclick="Close" aria-label="Cerrar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+
+            <div class="search-modal-header">
+                <h2 class="search-modal-title">¿Qué estás buscando?</h2>
+                <p class="search-modal-subtitle">Encontrá tu próxima propiedad</p>
+            </div>
+
+            <div class="search-modal-fields">
+
+                @* Lugar *@
+                <div class="smodal-field">
+                    <label class="smodal-label">¿Dónde querés buscar?</label>
+                    <div class="filter-search-wrap" style="max-width:100%;width:100%">
+                        <svg class="filter-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        </svg>
+                        <input class="filter-search-input" style="max-width:100%"
+                               type="text"
+                               placeholder="Ciudad, barrio, dirección..."
+                               @bind="lugar" />
+                    </div>
+                </div>
+
+                @* Operación *@
+                <div class="smodal-field">
+                    <label class="smodal-label">Tipo de operación</label>
+                    <div class="smodal-toggle-group">
+                        @foreach (var op in new[] { ("Venta", "Comprar"), ("Alquiler", "Alquilar"), ("AlquilerTemporario", "Temporario") })
+                        {
+                            var opVal = op.Item1;
+                            var opLabel = op.Item2;
+                            <button class='smodal-toggle @(operacion == opVal ? "active" : "")'
+                                    @onclick="() => operacion = opVal">
+                                @opLabel
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                @* Tipo de propiedad *@
+                <div class="smodal-field">
+                    <label class="smodal-label">Tipo de propiedad</label>
+                    <select class="filter-select" style="width:100%"
+                            @bind="tipoProp"
+                            aria-label="Tipo de propiedad">
+                        <option value="">Cualquier tipo</option>
+                        @foreach (var tipo in Enum.GetValues<TipoPropiedad>())
+                        {
+                            <option value="@tipo">@tipo</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <button class="smodal-submit btn-primary" @onclick="Submit">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                Buscar propiedades
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback<SearchCriteria> OnSearch { get; set; }
+
+    private string lugar = "";
+    private string operacion = "";
+    private string tipoProp = "";
+
+    private async Task Submit()
+    {
+        await OnSearch.InvokeAsync(new SearchCriteria(lugar, operacion, tipoProp));
+        await JS.InvokeVoidAsync("sessionStorage.setItem", "pm_searched", "1");
+    }
+
+    private async Task Close()
+    {
+        await OnSearch.InvokeAsync(new SearchCriteria(string.Empty, string.Empty, string.Empty));
+        await JS.InvokeVoidAsync("sessionStorage.setItem", "pm_searched", "1");
+    }
+
+    private async Task HandleOverlayClick() => await Close();
+
+    public record SearchCriteria(string Lugar, string Operacion, string TipoProp);
+}
