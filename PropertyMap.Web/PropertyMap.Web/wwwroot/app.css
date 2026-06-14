@@ -254,37 +254,23 @@ html, body {
 
 /* ─── Map markers ────────────────────────────────────────────────────────── */
 .pm-marker {
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-  font-family: var(--font-sans);
-  font-size: 11px;
-  font-weight: var(--font-semibold);
-  padding: 5px 10px;
-  border-radius: var(--radius-full);
-  white-space: nowrap;
   cursor: pointer;
-  box-shadow: 0 2px 8px oklch(0.175 0.010 20 / 0.30);
-  transition: transform 180ms var(--ease-out),
-              background 180ms,
-              box-shadow 180ms var(--ease-out);
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+              filter 200ms ease;
   transform-origin: bottom center;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));
   user-select: none;
 }
-.pm-marker:hover {
-  background: var(--color-primary-hover);
-  transform: scale(1.12);
-  box-shadow: 0 4px 14px oklch(0.175 0.010 20 / 0.38);
+.pm-marker:hover,
+.pm-marker.hovered {
+  transform: scale(1.3);
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.35));
+  z-index: 10;
 }
 .pm-marker.selected {
-  background: oklch(0.22 0.01 20);
-  transform: scale(1.18);
-  box-shadow: 0 4px 16px oklch(0.175 0.010 20 / 0.45);
-}
-.pm-marker.hovered {
-  background: oklch(0.52 0.12 220);
-  transform: scale(1.22);
-  box-shadow: 0 6px 20px oklch(0.52 0.12 220 / 0.45);
-  z-index: 10;
+  transform: scale(1.4);
+  filter: drop-shadow(0 4px 14px rgba(0,0,0,0.45));
+  z-index: 20;
 }
 
 /* ─── Listings Panel ─────────────────────────────────────────────────────── */
