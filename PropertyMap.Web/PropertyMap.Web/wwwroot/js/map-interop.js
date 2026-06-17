@@ -4,22 +4,37 @@ window.mapInterop = {
 
   _map: null,
   _markers: new Map(),   // id → { marker: mapboxgl.Marker, data }
+  _searchMarker: null,   // pin sobre la ubicación buscada
   _dotNetRef: null,
   _selectedId: null,
 
   // ── Inicializar el mapa ────────────────────────────────────────────────────
   initMap(elementId, lat, lng, zoom) {
     if (typeof mapboxgl === 'undefined') { console.warn('Mapbox GL no cargó'); return; }
+    const el = document.getElementById(elementId);
+    if (!el) return;
+
     if (this._map) {
-      this._map.resize();
-      return;
+      // Si el contenedor sigue siendo el mismo y está en el DOM, solo redimensionar.
+      const current = this._map.getContainer ? this._map.getContainer() : null;
+      if (current === el && el.isConnected) {
+        this._map.resize();
+        return;
+      }
+      // Navegación SPA: el contenedor anterior se destruyó. Recreamos el mapa.
+      try { this._map.remove(); } catch (e) { /* ya removido */ }
+      this._map = null;
+      this._markers.clear();
+      this._searchMarker = null;
+      this._dotNetRef = null;
+      this._selectedId = null;
     }
 
     mapboxgl.accessToken = window.MAPBOX_TOKEN;
 
     this._map = new mapboxgl.Map({
       container: elementId,
-      style: 'mapbox://styles/mapbox/streets-v12',
+      style: this._resolveStyle('mapbox://styles/mapbox/streets-v12'),
       center: [lng, lat],
       zoom: zoom ?? 13,
       attributionControl: true,
@@ -30,30 +45,103 @@ window.mapInterop = {
 
   // ── Centrar en ubicación del usuario ──────────────────────────────────────
   centerOnUser() {
-    if (!this._map || !navigator.geolocation) return;
+    // Solo una vez por sesión de página, para no re-preguntar en cada navegación.
+    if (this._centered || !this._map || !navigator.geolocation) return;
+    this._centered = true;
     navigator.geolocation.getCurrentPosition(
       pos => this._map.flyTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom: 14 }),
       () => {}
     );
   },
 
+  // Vuela a una coordenada y coloca el marcador de búsqueda (como Google Maps).
+  flyTo(lat, lng) {
+    if (!this._map) return;
+    this._map.flyTo({ center: [lng, lat], zoom: 15, duration: 1000 });
+    this.setSearchMarker(lat, lng);
+  },
+
+  // Marcador distintivo (azul) sobre la ubicación buscada por el usuario.
+  setSearchMarker(lat, lng) {
+    if (!this._map) return;
+    if (this._searchMarker) {
+      this._searchMarker.setLngLat([lng, lat]);
+      return;
+    }
+    const el = document.createElement('div');
+    el.className = 'pm-search-marker';
+    el.innerHTML = `
+      <svg width="34" height="44" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20C24 5.4 18.6 0 12 0z" fill="#1a73e8" stroke="white" stroke-width="1.5"/>
+        <circle cx="12" cy="12" r="4.5" fill="white"/>
+      </svg>`;
+    this._searchMarker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+      .setLngLat([lng, lat])
+      .addTo(this._map);
+  },
+
+  clearSearchMarker() {
+    if (this._searchMarker) { this._searchMarker.remove(); this._searchMarker = null; }
+  },
+
+  // Sugerencias de direcciones/lugares mientras se escribe.
+  // Sin token usa Nominatim (OpenStreetMap); con token, Mapbox v6.
+  async geocodeSuggest(query) {
+    if (!query || query.trim().length < 3) return [];
+    try {
+      if (window.MAP_FALLBACK || !window.MAPBOX_TOKEN) {
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&countrycodes=ar&accept-language=es`;
+        const json = await (await fetch(url)).json();
+        return (json || []).map(r => ({ label: r.display_name, lat: parseFloat(r.lat), lng: parseFloat(r.lon) }));
+      } else {
+        const url = `https://api.mapbox.com/search/geocode/v6/forward?q=${encodeURIComponent(query)}&access_token=${window.MAPBOX_TOKEN}&language=es&country=ar&limit=5`;
+        const json = await (await fetch(url)).json();
+        return (json.features || []).map(f => ({
+          label: (f.properties && (f.properties.full_address || f.properties.name)) || '',
+          lat: f.geometry.coordinates[1],
+          lng: f.geometry.coordinates[0]
+        }));
+      }
+    } catch (e) {
+      console.warn('geocodeSuggest error', e);
+      return [];
+    }
+  },
+
   // ── Geocodificar y volar al lugar ─────────────────────────────────────────
   async geocodeAndFly(query) {
     if (!this._map || !query) return;
-    const token = window.MAPBOX_TOKEN;
-    const encoded = encodeURIComponent(query);
-    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encoded}.json?access_token=${token}&language=es&country=AR&limit=1`;
     try {
-      const res = await fetch(url);
-      const json = await res.json();
-      const feature = json.features?.[0];
-      if (feature) {
-        const [lng, lat] = feature.center;
-        this._map.flyTo({ center: [lng, lat], zoom: 13, duration: 1200 });
+      const coords = window.MAP_FALLBACK
+        ? await this._geocodeNominatim(query)   // modo temporal sin token
+        : await this._geocodeMapbox(query);
+      if (coords) {
+        const [lng, lat] = coords;
+        this._map.flyTo({ center: [lng, lat], zoom: 15, duration: 1200 });
+        this.setSearchMarker(lat, lng);
       }
     } catch (e) {
       console.warn('Geocoding error', e);
     }
+  },
+
+  // Geocoding de Mapbox (API v6; la v5 está deprecada). Requiere token.
+  async _geocodeMapbox(query) {
+    const token = window.MAPBOX_TOKEN;
+    const encoded = encodeURIComponent(query);
+    const url = `https://api.mapbox.com/search/geocode/v6/forward?q=${encoded}&access_token=${token}&language=es&country=ar&limit=1`;
+    const json = await (await fetch(url)).json();
+    const feature = json.features?.[0];
+    return feature?.geometry?.coordinates ?? feature?.center ?? null;
+  },
+
+  // Geocoding gratuito de OpenStreetMap (Nominatim), sin token. Limitado a Argentina.
+  async _geocodeNominatim(query) {
+    const encoded = encodeURIComponent(query);
+    const url = `https://nominatim.openstreetmap.org/search?q=${encoded}&format=json&limit=1&countrycodes=ar&accept-language=es`;
+    const json = await (await fetch(url)).json();
+    const r = json?.[0];
+    return r ? [parseFloat(r.lon), parseFloat(r.lat)] : null;
   },
 
   // ── Cambiar style del mapa ────────────────────────────────────────────────
@@ -61,7 +149,7 @@ window.mapInterop = {
     if (!this._map) return;
     // Guardar markers actuales para re-agregarlos después del style load
     const currentMarkers = new Map(this._markers);
-    this._map.setStyle(styleUrl);
+    this._map.setStyle(this._resolveStyle(styleUrl));
     this._map.once('styledata', () => {
       currentMarkers.forEach(({ marker }) => marker.addTo(this._map));
     });
@@ -160,6 +248,34 @@ window.mapInterop = {
   },
 
   // ── Helpers ────────────────────────────────────────────────────────────────
+
+  // Resuelve el estilo del mapa según el modo activo:
+  //  • Con token de Mapbox → se usa el estilo mapbox:// tal cual.
+  //  • Sin token (MapLibre) → estilos gratuitos equivalentes que no requieren token.
+  _resolveStyle(style) {
+    if (!window.MAP_FALLBACK) return style;
+    if (typeof style === 'string' && style.includes('satellite')) {
+      return this._satelliteStyle();
+    }
+    return 'https://tiles.openfreemap.org/styles/liberty';
+  },
+
+  // Estilo satelital gratuito (imágenes de Esri World Imagery, sin token).
+  _satelliteStyle() {
+    return {
+      version: 8,
+      sources: {
+        'esri-satellite': {
+          type: 'raster',
+          tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+          tileSize: 256,
+          attribution: 'Tiles © Esri, Maxar, Earthstar Geographics'
+        }
+      },
+      layers: [{ id: 'esri-satellite', type: 'raster', source: 'esri-satellite' }]
+    };
+  },
+
   _createHouseMarker(operacion) {
     const colorMap = {
       'Venta':              '#be123c',   // crimson
@@ -189,4 +305,75 @@ window.mapInterop = {
     if (precio >= 1_000)     return `${sym}${Math.round(precio / 1_000)}k`;
     return `${sym}${precio}`;
   },
+};
+
+// ── Mini-mapa de un solo punto (detalle + wizard) ───────────────────────────
+// Instancias independientes por elemento, para coexistir con el mapa principal.
+// Usa la misma librería activa (Mapbox con token o MapLibre gratis) vía el alias
+// global `mapboxgl` y reutiliza mapInterop._resolveStyle para elegir el estilo.
+window.detailMap = {
+  _maps: {},   // elementId → { map, marker }
+
+  init(elementId, lat, lng, zoom, draggable, dotNetRef) {
+    if (typeof mapboxgl === 'undefined') { console.warn('Mapa no cargó'); return; }
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    if (this._maps[elementId]) this.dispose(elementId);
+
+    if (window.MAPBOX_TOKEN) mapboxgl.accessToken = window.MAPBOX_TOKEN;
+
+    const style = window.mapInterop
+      ? window.mapInterop._resolveStyle('mapbox://styles/mapbox/streets-v12')
+      : 'https://tiles.openfreemap.org/styles/liberty';
+
+    const map = new mapboxgl.Map({
+      container: elementId,
+      style: style,
+      center: [lng, lat],
+      zoom: zoom ?? 15,
+      attributionControl: true,
+    });
+    map.addControl(new mapboxgl.NavigationControl(), 'bottom-right');
+
+    const marker = new mapboxgl.Marker({ draggable: !!draggable })
+      .setLngLat([lng, lat])
+      .addTo(map);
+
+    if (draggable && dotNetRef) {
+      marker.on('dragend', () => {
+        const p = marker.getLngLat();
+        dotNetRef.invokeMethodAsync('OnPinDragged', p.lat, p.lng);
+      });
+      // Click en el mapa también mueve el pin.
+      map.on('click', (e) => {
+        marker.setLngLat(e.lngLat);
+        dotNetRef.invokeMethodAsync('OnPinDragged', e.lngLat.lat, e.lngLat.lng);
+      });
+    }
+
+    map.on('load', () => map.resize());
+
+    this._maps[elementId] = { map, marker };
+  },
+
+  setPosition(elementId, lat, lng) {
+    const inst = this._maps[elementId];
+    if (!inst) return;
+    inst.marker.setLngLat([lng, lat]);
+    inst.map.setCenter([lng, lat]);
+  },
+
+  dispose(elementId) {
+    const inst = this._maps[elementId];
+    if (!inst) return;
+    try { inst.map.remove(); } catch (e) { /* ya removido */ }
+    delete this._maps[elementId];
+  },
+};
+
+// ── Persistencia simple (borrador del wizard) ───────────────────────────────
+window.pmStorage = {
+  get(key)      { try { return localStorage.getItem(key); } catch { return null; } },
+  set(key, val) { try { localStorage.setItem(key, val); } catch { /* cuota llena */ } },
+  remove(key)   { try { localStorage.removeItem(key); } catch { /* noop */ } },
 };

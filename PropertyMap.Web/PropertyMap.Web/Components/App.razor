@@ -1,4 +1,8 @@
 @inject IConfiguration Configuration
+@{
+    var mapboxToken = Configuration["Mapbox:AccessToken"];
+    var hasMapboxToken = !string.IsNullOrWhiteSpace(mapboxToken) && mapboxToken.StartsWith("pk.");
+}
 <!DOCTYPE html>
 <html lang="es">
 
@@ -10,7 +14,14 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.css" rel="stylesheet" />
+    @if (hasMapboxToken)
+    {
+        <link href="https://api.mapbox.com/mapbox-gl-js/v3.24.1/mapbox-gl.css" rel="stylesheet" />
+    }
+    else
+    {
+        <link href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css" rel="stylesheet" />
+    }
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["PropertyMap.Web.styles.css"]" />
 
@@ -20,9 +31,19 @@
 
 <body>
     <Routes />
-    <script>window.MAPBOX_TOKEN = '@Configuration["Mapbox:AccessToken"]';</script>
+    <script>window.MAPBOX_TOKEN = '@mapboxToken';</script>
     <script src="_framework/blazor.web.js"></script>
-    <script src="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.js"></script>
+    @if (hasMapboxToken)
+    {
+        <script src="https://api.mapbox.com/mapbox-gl-js/v3.24.1/mapbox-gl.js"></script>
+    }
+    else
+    {
+        @* TEMPORAL: sin token de Mapbox usamos MapLibre (API compatible) con mapas gratuitos.
+           Al cargar un token válido en Mapbox:AccessToken vuelve solo a Mapbox, sin tocar código. *@
+        <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+        <script>window.mapboxgl = window.maplibregl; window.MAP_FALLBACK = true;</script>
+    }
     <script src="js/map-interop.js"></script>
 </body>
 
