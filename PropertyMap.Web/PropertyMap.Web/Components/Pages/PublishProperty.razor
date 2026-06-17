@@ -1,0 +1,596 @@
+@page "/publicar"
+@using PropertyMap.Core
+@using PropertyMap.Core.Entities
+@using PropertyMap.Core.Enums
+@using PropertyMap.Core.Interfaces
+@inject IListingRepository ListingRepo
+@inject IPublisherRepository PublisherRepo
+@inject ILocationRepository LocationRepo
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject IWebHostEnvironment Env
+@rendermode InteractiveServer
+
+<PageTitle>Publicar propiedad — PropertyMap</PageTitle>
+
+<div class="app-shell">
+    <nav class="pm-navbar" role="navigation" aria-label="Navegación principal">
+        <a href="/" class="pm-navbar__logo">PropertyMap</a>
+        <span class="wizard-navbar-title">Publicar una propiedad</span>
+        <div class="pm-navbar__actions">
+            <a href="/" class="btn-ghost">Cancelar</a>
+        </div>
+    </nav>
+
+    <div class="wizard">
+        <div class="wizard-stepper-wrap">
+            <StepIndicator Steps="StepNames" Current="step" OnStepClick="GoToStep" />
+        </div>
+
+        <div class="wizard-body">
+            <div class="wizard-step-content" @key="step">
+
+                @* ── Paso 0: Operación + tipo ───────────────────────── *@
+                @if (step == 0)
+                {
+                    <h2 class="wizard-h2">¿Qué querés hacer?</h2>
+                    <p class="wizard-hint">Elegí el tipo de operación.</p>
+                    <div class="choice-grid">
+                        @foreach (var op in Enum.GetValues<TipoOperacion>())
+                        {
+                            <button type="button" class="choice-card @(model.Operacion == op ? "selected" : "")"
+                                    @onclick="() => model.Operacion = op">
+                                <span class="choice-emoji">@OpEmoji(op)</span>
+                                <span class="choice-label">@OpLabel(op)</span>
+                            </button>
+                        }
+                    </div>
+
+                    <h2 class="wizard-h2" style="margin-top:var(--space-6)">Tipo de propiedad</h2>
+                    <div class="choice-grid choice-grid--compact">
+                        @foreach (var tp in Enum.GetValues<TipoPropiedad>())
+                        {
+                            <button type="button" class="choice-card @(model.Tipo == tp ? "selected" : "")"
+                                    @onclick="() => model.Tipo = tp">
+                                <span class="choice-emoji">@TipoEmoji(tp)</span>
+                                <span class="choice-label">@tp</span>
+                            </button>
+                        }
+                    </div>
+                }
+
+                @* ── Paso 1: Ubicación ──────────────────────────────── *@
+                else if (step == 1)
+                {
+                    <h2 class="wizard-h2">¿Dónde está?</h2>
+                    <p class="wizard-hint">Escribí la dirección: el pin se ubica solo. Podés ajustarlo arrastrándolo.</p>
+
+                    <label class="field">
+                        <span class="field-label">Dirección</span>
+                        <input class="field-input" value="@model.Direccion" @oninput="OnDireccionInput"
+                               placeholder="Ej: Av. España 316" />
+                    </label>
+                    <div class="field-row">
+                        <label class="field">
+                            <span class="field-label">Barrio / Ciudad</span>
+                            <input class="field-input" @bind="model.Ciudad" @bind:after="GeocodeAddressDebounced" placeholder="Santa Rosa" />
+                        </label>
+                        <label class="field">
+                            <span class="field-label">Provincia</span>
+                            <input class="field-input" @bind="model.Provincia" @bind:after="GeocodeAddressDebounced" placeholder="La Pampa" />
+                        </label>
+                    </div>
+
+                    <div class="field-label" style="margin-top:var(--space-3)">Ubicación exacta en el mapa</div>
+                    <div class="wizard-map">
+                        <LocationMap @ref="locMap" Lat="model.Lat" Lng="model.Lng" Zoom="14"
+                                     Height="320px" Draggable="true" OnPinMoved="OnPinMoved" />
+                    </div>
+                    <p class="wizard-coords">Lat: @model.Lat.ToString("F5") · Lng: @model.Lng.ToString("F5")</p>
+                }
+
+                @* ── Paso 2: Características ─────────────────────────── *@
+                else if (step == 2)
+                {
+                    <h2 class="wizard-h2">Características</h2>
+                    <p class="wizard-hint">Contanos los detalles del inmueble.</p>
+
+                    <div class="field-row">
+                        <label class="field">
+                            <span class="field-label">Superficie total (m²)</span>
+                            <input type="number" min="0" class="field-input" @bind="model.Superficie" />
+                        </label>
+                        <label class="field">
+                            <span class="field-label">Superficie cubierta (m²)</span>
+                            <input type="number" min="0" class="field-input" @bind="model.SuperficieCubierta" />
+                        </label>
+                    </div>
+                    <div class="field-row">
+                        <NumberStepper Label="Ambientes" @bind-Value="model.Ambientes" />
+                        <NumberStepper Label="Dormitorios" @bind-Value="model.Dormitorios" />
+                    </div>
+                    <div class="field-row">
+                        <NumberStepper Label="Baños" @bind-Value="model.Banos" />
+                        <label class="field">
+                            <span class="field-label">Antigüedad (años)</span>
+                            <input type="number" min="0" class="field-input" @bind="model.Antiguedad" />
+                        </label>
+                    </div>
+                    <label class="checkbox-field">
+                        <input type="checkbox" @bind="model.Cochera" />
+                        <span>Tiene cochera</span>
+                    </label>
+
+                    <div class="field-label" style="margin-top:var(--space-4)">Comodidades</div>
+                    <div class="amenities-select">
+                        @foreach (var a in Amenidades.Catalogo)
+                        {
+                            <button type="button"
+                                    class="amenity-toggle @(model.Amenities.Contains(a) ? "selected" : "")"
+                                    @onclick="() => ToggleAmenity(a)">
+                                @a
+                            </button>
+                        }
+                    </div>
+                }
+
+                @* ── Paso 3: Fotos ─────────────────────────────────── *@
+                else if (step == 3)
+                {
+                    <h2 class="wizard-h2">Fotos</h2>
+                    <p class="wizard-hint">Subí entre @MinFotos y @MaxFotos fotos. La primera será la portada.</p>
+
+                    <label class="dropzone" id="dropzone">
+                        <InputFile OnChange="OnFilesSelected" multiple accept="image/*" class="dropzone-input" />
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <span class="dropzone-text"><strong>Arrastrá tus fotos acá</strong> o hacé click para elegir</span>
+                        <span class="dropzone-hint">JPG o PNG · máx. 5 MB c/u</span>
+                    </label>
+
+                    @if (model.Fotos.Count > 0)
+                    {
+                        <div class="photo-grid">
+                            @for (int i = 0; i < model.Fotos.Count; i++)
+                            {
+                                var idx = i;
+                                <div class="photo-tile @(idx == 0 ? "is-cover" : "")">
+                                    <img src="@model.Fotos[idx]" alt="Foto @(idx + 1)" />
+                                    @if (idx == 0)
+                                    {
+                                        <span class="photo-cover-badge">Portada</span>
+                                    }
+                                    <div class="photo-actions">
+                                        <button type="button" title="Mover izquierda" disabled="@(idx == 0)"
+                                                @onclick="() => MovePhoto(idx, -1)" aria-label="Mover a la izquierda">‹</button>
+                                        <button type="button" title="Mover derecha" disabled="@(idx == model.Fotos.Count - 1)"
+                                                @onclick="() => MovePhoto(idx, 1)" aria-label="Mover a la derecha">›</button>
+                                        <button type="button" class="photo-del" title="Eliminar"
+                                                @onclick="() => RemovePhoto(idx)" aria-label="Eliminar foto">✕</button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <p class="wizard-hint">@model.Fotos.Count foto(s) cargada(s).</p>
+                    }
+                }
+
+                @* ── Paso 4: Precio + descripción ──────────────────── *@
+                else if (step == 4)
+                {
+                    <h2 class="wizard-h2">Precio y descripción</h2>
+
+                    <div class="field-row">
+                        <label class="field" style="flex:2">
+                            <span class="field-label">Precio</span>
+                            <input type="number" min="0" class="field-input" @bind="model.Precio" placeholder="0" />
+                        </label>
+                        <label class="field" style="flex:1">
+                            <span class="field-label">Moneda</span>
+                            <select class="field-input" @bind="model.Moneda">
+                                <option value="USD">USD</option>
+                                <option value="ARS">ARS</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <label class="field">
+                        <span class="field-label">Título del aviso</span>
+                        <input class="field-input" @bind="model.Titulo" maxlength="80"
+                               placeholder="Ej: Luminoso 3 ambientes en Palermo" />
+                    </label>
+
+                    <label class="field">
+                        <span class="field-label">Descripción</span>
+                        <textarea class="field-input" rows="6" maxlength="1500"
+                                  @bind="model.Descripcion" @bind:event="oninput"
+                                  placeholder="Contá lo mejor de tu propiedad..."></textarea>
+                        <span class="char-counter">@(model.Descripcion?.Length ?? 0) / 1500</span>
+                    </label>
+                }
+
+                @* ── Paso 5: Revisión ──────────────────────────────── *@
+                else if (step == 5)
+                {
+                    <h2 class="wizard-h2">Revisá tu publicación</h2>
+                    <p class="wizard-hint">Así se va a ver en el listado. Confirmá para publicar.</p>
+
+                    <div class="review-layout">
+                        @* Preview card idéntica al listado *@
+                        <div class="property-card" style="max-width:320px">
+                            @if (model.Fotos.Count > 0)
+                            {
+                                <img class="card-photo" src="@model.Fotos[0]" alt="@model.Titulo" />
+                            }
+                            else
+                            {
+                                <div class="card-photo-placeholder" aria-hidden="true">
+                                    <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+                                </div>
+                            }
+                            <div class="card-body">
+                                <div class="card-price">@model.Moneda @model.Precio.ToString("N0")</div>
+                                <div class="card-badges">
+                                    <span class="badge badge-operacion">@OpLabel(model.Operacion)</span>
+                                    <span class="badge badge-tipo">@model.Tipo</span>
+                                </div>
+                                <div class="card-address">@(string.IsNullOrWhiteSpace(model.Direccion) ? "Sin dirección" : model.Direccion)</div>
+                                <div class="card-stats">
+                                    @if (model.Superficie > 0) { <span class="card-stat">@model.Superficie m²</span> }
+                                    @if (model.Ambientes > 0) { <span class="card-stat">@model.Ambientes amb.</span> }
+                                    @if (model.Dormitorios > 0) { <span class="card-stat">@model.Dormitorios dorm.</span> }
+                                </div>
+                            </div>
+                        </div>
+
+                        @* Resumen de datos *@
+                        <div class="review-summary">
+                            <dl>
+                                <div><dt>Operación</dt><dd>@OpLabel(model.Operacion)</dd></div>
+                                <div><dt>Tipo</dt><dd>@model.Tipo</dd></div>
+                                <div><dt>Dirección</dt><dd>@model.Direccion @(string.IsNullOrWhiteSpace(model.Ciudad) ? "" : $"· {model.Ciudad}")</dd></div>
+                                <div><dt>Superficie</dt><dd>@model.Superficie m² (@model.SuperficieCubierta m² cub.)</dd></div>
+                                <div><dt>Ambientes</dt><dd>@model.Ambientes amb · @model.Dormitorios dorm · @model.Banos baños</dd></div>
+                                <div><dt>Cochera</dt><dd>@(model.Cochera ? "Sí" : "No")</dd></div>
+                                <div><dt>Comodidades</dt><dd>@(model.Amenities.Count > 0 ? string.Join(", ", model.Amenities) : "—")</dd></div>
+                                <div><dt>Fotos</dt><dd>@model.Fotos.Count</dd></div>
+                            </dl>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @* ── Footer sticky de navegación ────────────────────────── *@
+        <div class="wizard-footer">
+            <button type="button" class="btn-ghost" @onclick="Prev" disabled="@(step == 0)">Anterior</button>
+            <span class="wizard-footer-progress">Paso @(step + 1) de @StepNames.Count</span>
+            @if (step < StepNames.Count - 1)
+            {
+                <button type="button" class="btn-primary" @onclick="Next">Siguiente</button>
+            }
+            else
+            {
+                <button type="button" class="btn-primary" @onclick="Publish" disabled="@publishing">
+                    @(publishing ? "Publicando..." : "Publicar propiedad")
+                </button>
+            }
+        </div>
+    </div>
+</div>
+
+@* Toast *@
+@if (toast is not null)
+{
+    <div class="toast toast--@toast.Value.Kind" role="alert">@toast.Value.Msg</div>
+}
+
+@code {
+    private const int MinFotos = 1;
+    private const int MaxFotos = 12;
+    private const string StorageKey = "propertymap-wizard-draft";
+
+    private readonly List<string> StepNames =
+        ["Operación", "Ubicación", "Características", "Fotos", "Precio", "Revisión"];
+
+    private int step;
+    private WizardModel model = new();
+    private LocationMap? locMap;
+    private bool publishing;
+    private bool restored;
+
+    private (string Msg, string Kind)? toast;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !restored)
+        {
+            restored = true;
+            try
+            {
+                var json = await JS.InvokeAsync<string?>("pmStorage.get", StorageKey);
+                if (!string.IsNullOrEmpty(json))
+                {
+                    var saved = System.Text.Json.JsonSerializer.Deserialize<WizardModel>(json);
+                    if (saved is not null)
+                    {
+                        // Las fotos (base64) no se persisten por tamaño; se conservan los datos.
+                        model = saved;
+                        StateHasChanged();
+                    }
+                }
+            }
+            catch { /* draft corrupto: se ignora */ }
+        }
+    }
+
+    private async Task SaveDraft()
+    {
+        try
+        {
+            // Persistir sin las fotos para no exceder la cuota de localStorage.
+            var light = model.CloneWithoutPhotos();
+            var json = System.Text.Json.JsonSerializer.Serialize(light);
+            await JS.InvokeVoidAsync("pmStorage.set", StorageKey, json);
+        }
+        catch { }
+    }
+
+    private async Task Next()
+    {
+        if (!ValidateStep()) return;
+        if (step < StepNames.Count - 1) step++;
+        await SaveDraft();
+    }
+
+    private void Prev() { if (step > 0) step--; }
+
+    private async Task GoToStep(int idx)
+    {
+        if (idx <= step) step = idx;
+        await Task.CompletedTask;
+    }
+
+    private bool ValidateStep()
+    {
+        switch (step)
+        {
+            case 1 when string.IsNullOrWhiteSpace(model.Direccion):
+                ShowToast("Ingresá una dirección.", "error"); return false;
+            case 3 when model.Fotos.Count < MinFotos:
+                ShowToast($"Subí al menos {MinFotos} foto.", "error"); return false;
+            case 4 when model.Precio <= 0:
+                ShowToast("Ingresá un precio válido.", "error"); return false;
+            case 4 when string.IsNullOrWhiteSpace(model.Titulo):
+                ShowToast("Ingresá un título para el aviso.", "error"); return false;
+            default:
+                return true;
+        }
+    }
+
+    private void ToggleAmenity(string a)
+    {
+        if (!model.Amenities.Remove(a)) model.Amenities.Add(a);
+    }
+
+    private async Task OnPinMoved((double Lat, double Lng) pos)
+    {
+        model.Lat = pos.Lat; model.Lng = pos.Lng;
+        await SaveDraft();
+    }
+
+    private CancellationTokenSource? geoCts;
+
+    private async Task OnDireccionInput(ChangeEventArgs e)
+    {
+        model.Direccion = e.Value?.ToString() ?? "";
+        await GeocodeAddressDebounced();
+    }
+
+    // Geocodifica la dirección escrita y reposiciona el pin (como Google Maps).
+    private async Task GeocodeAddressDebounced()
+    {
+        geoCts?.Cancel();
+        if (model.Direccion.Trim().Length < 4) return;
+
+        geoCts = new CancellationTokenSource();
+        var token = geoCts.Token;
+        try
+        {
+            await Task.Delay(600, token);
+            var query = $"{model.Direccion}, {model.Ciudad}, {model.Provincia}, Argentina";
+            var results = await JS.InvokeAsync<GeoResult[]>("mapInterop.geocodeSuggest", query);
+            if (token.IsCancellationRequested) return;
+
+            var first = results.FirstOrDefault();
+            if (first is not null)
+            {
+                model.Lat = first.Lat;
+                model.Lng = first.Lng;
+                if (locMap is not null) await locMap.SetPositionAsync(first.Lat, first.Lng);
+                await SaveDraft();
+            }
+        }
+        catch (OperationCanceledException) { /* nueva tecla: se cancela esta búsqueda */ }
+    }
+
+    private record GeoResult(string Label, double Lat, double Lng);
+
+    private async Task OnFilesSelected(InputFileChangeEventArgs e)
+    {
+        // Guardamos las fotos como archivos en wwwroot/uploads y almacenamos la URL.
+        // Evita meter base64 pesado en la BD (lo que volvía lentas todas las pantallas).
+        var uploadsDir = Path.Combine(Env.WebRootPath, "uploads");
+        Directory.CreateDirectory(uploadsDir);
+
+        foreach (var file in e.GetMultipleFiles(maximumFileCount: MaxFotos))
+        {
+            if (model.Fotos.Count >= MaxFotos)
+            {
+                ShowToast($"Máximo {MaxFotos} fotos.", "error");
+                break;
+            }
+            try
+            {
+                var ext = Path.GetExtension(file.Name);
+                if (string.IsNullOrWhiteSpace(ext)) ext = ".jpg";
+                var fileName = $"{Guid.NewGuid():N}{ext}";
+                var fullPath = Path.Combine(uploadsDir, fileName);
+
+                await using (var fs = File.Create(fullPath))
+                await using (var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024))
+                {
+                    await stream.CopyToAsync(fs);
+                }
+                model.Fotos.Add($"/uploads/{fileName}");
+            }
+            catch (Exception)
+            {
+                ShowToast($"No se pudo cargar {file.Name} (¿supera 5 MB?).", "error");
+            }
+        }
+    }
+
+    private void MovePhoto(int idx, int dir)
+    {
+        var n = idx + dir;
+        if (n < 0 || n >= model.Fotos.Count) return;
+        (model.Fotos[idx], model.Fotos[n]) = (model.Fotos[n], model.Fotos[idx]);
+    }
+
+    private void RemovePhoto(int idx) => model.Fotos.RemoveAt(idx);
+
+    private async Task Publish()
+    {
+        if (!ValidateStep()) return;
+        publishing = true;
+        try
+        {
+            // Publicador demo: reutiliza el primero disponible o crea uno.
+            var publisher = await PublisherRepo.GetByUserIdAsync("demo")
+                ?? new Publisher
+                {
+                    Nombre = "Mi publicación",
+                    Email = "demo@propertymap.local",
+                    Tipo = TipoPublicador.Particular,
+                    UserId = "demo"
+                };
+            if (publisher.Id == 0) await PublisherRepo.AddAsync(publisher);
+
+            var location = new Location
+            {
+                Latitud = model.Lat,
+                Longitud = model.Lng,
+                DireccionTexto = model.Direccion,
+                Ciudad = model.Ciudad ?? "",
+                Provincia = model.Provincia ?? "",
+                Pais = "Argentina"
+            };
+
+            var listing = new PropertyListing
+            {
+                PublisherId = publisher.Id,
+                Location = location,
+                Titulo = model.Titulo,
+                Descripcion = model.Descripcion ?? "",
+                Precio = model.Precio,
+                Moneda = model.Moneda,
+                TipoPropiedad = model.Tipo,
+                Operacion = model.Operacion,
+                Superficie = model.Superficie > 0 ? model.Superficie : null,
+                SuperficieCubierta = model.SuperficieCubierta > 0 ? model.SuperficieCubierta : null,
+                Ambientes = model.Ambientes > 0 ? model.Ambientes : null,
+                Dormitorios = model.Dormitorios > 0 ? model.Dormitorios : null,
+                Banos = model.Banos > 0 ? model.Banos : null,
+                Antiguedad = model.Antiguedad > 0 ? model.Antiguedad : null,
+                Cochera = model.Cochera,
+                Amenities = model.Amenities,
+                Fotos = model.Fotos,
+                Estado = EstadoPropiedad.Activa
+            };
+
+            await ListingRepo.AddAsync(listing);
+            await JS.InvokeVoidAsync("pmStorage.remove", StorageKey);
+
+            ShowToast("¡Propiedad publicada!", "success");
+            await Task.Delay(700);
+            Nav.NavigateTo($"/property/{listing.Id}");
+        }
+        catch (Exception ex)
+        {
+            ShowToast($"Error al publicar: {ex.Message}", "error");
+            publishing = false;
+        }
+    }
+
+    private void ShowToast(string msg, string kind)
+    {
+        toast = (msg, kind);
+        _ = HideToastLater();
+    }
+
+    private async Task HideToastLater()
+    {
+        await Task.Delay(3200);
+        toast = null;
+        StateHasChanged();
+    }
+
+    private static string OpLabel(TipoOperacion op) => op switch
+    {
+        TipoOperacion.Venta => "Venta",
+        TipoOperacion.Alquiler => "Alquiler",
+        TipoOperacion.AlquilerTemporario => "Temporario",
+        _ => op.ToString()
+    };
+    private static string OpEmoji(TipoOperacion op) => op switch
+    {
+        TipoOperacion.Venta => "🏷️",
+        TipoOperacion.Alquiler => "🔑",
+        TipoOperacion.AlquilerTemporario => "🗓️",
+        _ => "🏠"
+    };
+    private static string TipoEmoji(TipoPropiedad t) => t switch
+    {
+        TipoPropiedad.Departamento => "🏢",
+        TipoPropiedad.Casa => "🏠",
+        TipoPropiedad.Terreno => "🌳",
+        TipoPropiedad.Local => "🏬",
+        TipoPropiedad.Oficina => "💼",
+        _ => "📦"
+    };
+
+    public class WizardModel
+    {
+        public TipoOperacion Operacion { get; set; } = TipoOperacion.Venta;
+        public TipoPropiedad Tipo { get; set; } = TipoPropiedad.Departamento;
+        public string Direccion { get; set; } = "";
+        public string? Ciudad { get; set; }
+        public string? Provincia { get; set; }
+        public double Lat { get; set; } = -36.6200;
+        public double Lng { get; set; } = -64.2895;
+        public decimal Superficie { get; set; }
+        public decimal SuperficieCubierta { get; set; }
+        public int Ambientes { get; set; }
+        public int Dormitorios { get; set; }
+        public int Banos { get; set; }
+        public int Antiguedad { get; set; }
+        public bool Cochera { get; set; }
+        public List<string> Amenities { get; set; } = [];
+        public List<string> Fotos { get; set; } = [];
+        public decimal Precio { get; set; }
+        public string Moneda { get; set; } = "USD";
+        public string Titulo { get; set; } = "";
+        public string? Descripcion { get; set; }
+
+        public WizardModel CloneWithoutPhotos() => new()
+        {
+            Operacion = Operacion, Tipo = Tipo, Direccion = Direccion,
+            Ciudad = Ciudad, Provincia = Provincia, Lat = Lat, Lng = Lng,
+            Superficie = Superficie, SuperficieCubierta = SuperficieCubierta,
+            Ambientes = Ambientes, Dormitorios = Dormitorios, Banos = Banos,
+            Antiguedad = Antiguedad, Cochera = Cochera,
+            Amenities = [.. Amenities], Fotos = [],
+            Precio = Precio, Moneda = Moneda, Titulo = Titulo, Descripcion = Descripcion
+        };
+    }
+}

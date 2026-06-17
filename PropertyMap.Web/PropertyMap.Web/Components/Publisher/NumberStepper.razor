@@ -1,0 +1,21 @@
+@* Input numérico con botones +/- para el wizard (ambientes, dormitorios, baños). *@
+
+<div class="field">
+    <span class="field-label">@Label</span>
+    <div class="stepper-input">
+        <button type="button" @onclick="Dec" disabled="@(Value <= Min)" aria-label="Restar">−</button>
+        <span class="stepper-value">@Value</span>
+        <button type="button" @onclick="Inc" disabled="@(Value >= Max)" aria-label="Sumar">+</button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public int Value { get; set; }
+    [Parameter] public EventCallback<int> ValueChanged { get; set; }
+    [Parameter] public int Min { get; set; } = 0;
+    [Parameter] public int Max { get; set; } = 20;
+
+    private async Task Inc() { if (Value < Max) await ValueChanged.InvokeAsync(Value + 1); }
+    private async Task Dec() { if (Value > Min) await ValueChanged.InvokeAsync(Value - 1); }
+}

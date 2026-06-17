@@ -1,0 +1,65 @@
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@* Mini-mapa de un único punto. Reutiliza la capa de mapas del proyecto
+   (MapLibre/Mapbox) vía detailMap en map-interop.js.
+   Si Draggable=true, el pin se puede arrastrar y notifica la nueva posición. *@
+
+<div class="location-map" id="@mapId" style="width:100%;height:@Height"></div>
+
+@code {
+    [Parameter] public double Lat { get; set; }
+    [Parameter] public double Lng { get; set; }
+    [Parameter] public int Zoom { get; set; } = 15;
+    [Parameter] public string Height { get; set; } = "280px";
+    [Parameter] public bool Draggable { get; set; }
+    [Parameter] public EventCallback<(double Lat, double Lng)> OnPinMoved { get; set; }
+
+    private readonly string mapId = $"loc-map-{Guid.NewGuid():N}";
+    private DotNetObjectReference<LocationMap>? dotNetRef;
+    private bool init;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            dotNetRef = DotNetObjectReference.Create(this);
+            try
+            {
+                await JS.InvokeVoidAsync("detailMap.init", mapId, Lat, Lng, Zoom, Draggable, dotNetRef);
+                init = true;
+            }
+            catch (JSException) { }
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnPinDragged(double lat, double lng)
+    {
+        Lat = lat; Lng = lng;
+        if (OnPinMoved.HasDelegate)
+            await OnPinMoved.InvokeAsync((lat, lng));
+    }
+
+    /// <summary>Permite mover el pin desde el padre (ej: el wizard al cambiar la dirección).</summary>
+    public async Task SetPositionAsync(double lat, double lng)
+    {
+        Lat = lat; Lng = lng;
+        if (init)
+        {
+            try { await JS.InvokeVoidAsync("detailMap.setPosition", mapId, lat, lng); }
+            catch (JSException) { }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (init)
+        {
+            try { await JS.InvokeVoidAsync("detailMap.dispose", mapId); }
+            catch (JSDisconnectedException) { }
+            catch (JSException) { }
+        }
+        dotNetRef?.Dispose();
+    }
+}

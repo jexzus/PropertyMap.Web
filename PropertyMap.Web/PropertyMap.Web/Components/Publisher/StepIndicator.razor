@@ -1,0 +1,42 @@
+@* Indicador de progreso del wizard. El paso activo y los completados usan el
+   color primario (bordó). Permite volver a pasos ya visitados haciendo click. *@
+
+<div class="stepper" role="list" aria-label="Progreso de publicación">
+    @for (int i = 0; i < Steps.Count; i++)
+    {
+        var idx = i;
+        var state = idx < Current ? "done" : idx == Current ? "active" : "todo";
+        <div class="step @state" role="listitem" aria-current="@(idx == Current ? "step" : null)">
+            <button type="button" class="step-bullet"
+                    disabled="@(idx > Current)"
+                    @onclick="() => Go(idx)"
+                    aria-label="Paso @(idx + 1): @Steps[idx]">
+                @if (idx < Current)
+                {
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                }
+                else
+                {
+                    <span>@(idx + 1)</span>
+                }
+            </button>
+            <span class="step-label">@Steps[idx]</span>
+            @if (idx < Steps.Count - 1)
+            {
+                <span class="step-line @(idx < Current ? "filled" : "")" aria-hidden="true"></span>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public List<string> Steps { get; set; } = [];
+    [Parameter] public int Current { get; set; }
+    [Parameter] public EventCallback<int> OnStepClick { get; set; }
+
+    private async Task Go(int idx)
+    {
+        if (idx <= Current && OnStepClick.HasDelegate)
+            await OnStepClick.InvokeAsync(idx);
+    }
+}
