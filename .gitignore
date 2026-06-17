@@ -364,3 +364,6 @@ FodyWeavers.xsd
 # Secrets — never commit tokens
 appsettings.Development.json
 appsettings.Local.json
+
+# Fotos subidas por usuarios en runtime (no son parte del codigo)
+**/wwwroot/uploads/

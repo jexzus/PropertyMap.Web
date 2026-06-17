@@ -22,22 +22,23 @@ public static class DbSeeder
 
         var locations = new[]
         {
+            // Coordenadas geocodificadas (OpenStreetMap) para que el pin coincida con la dirección.
             // 0 - Armesto 586 (Inti Hue, Nueva Vista)
-            new Location { Latitud = -36.5985, Longitud = -64.2640, DireccionTexto = "Armesto 586",          Ciudad = "Santa Rosa", Provincia = "La Pampa" },
+            new Location { Latitud = -36.64269, Longitud = -64.31722, DireccionTexto = "Armesto 586",          Ciudad = "Santa Rosa", Provincia = "La Pampa" },
             // 1 - Av. España 316 (esq. Dante Alighieri)
-            new Location { Latitud = -36.6200, Longitud = -64.2895, DireccionTexto = "Av. España 316",       Ciudad = "Santa Rosa", Provincia = "La Pampa" },
+            new Location { Latitud = -36.62551, Longitud = -64.28710, DireccionTexto = "Av. España 316",       Ciudad = "Santa Rosa", Provincia = "La Pampa" },
             // 2 - Emilio Civit 2765
-            new Location { Latitud = -36.6340, Longitud = -64.2695, DireccionTexto = "Emilio Civit 2765",    Ciudad = "Santa Rosa", Provincia = "La Pampa" },
+            new Location { Latitud = -36.64751, Longitud = -64.31145, DireccionTexto = "Emilio Civit 2765",    Ciudad = "Santa Rosa", Provincia = "La Pampa" },
             // 3 - Tierra del Fuego 133
-            new Location { Latitud = -36.6148, Longitud = -64.2960, DireccionTexto = "Tierra del Fuego 133", Ciudad = "Santa Rosa", Provincia = "La Pampa" },
+            new Location { Latitud = -36.60744, Longitud = -64.28384, DireccionTexto = "Tierra del Fuego 133", Ciudad = "Santa Rosa", Provincia = "La Pampa" },
             // 4 - Arenales 437 (Villa Alonso)
-            new Location { Latitud = -36.6090, Longitud = -64.3010, DireccionTexto = "Arenales 437",         Ciudad = "Santa Rosa", Provincia = "La Pampa" },
+            new Location { Latitud = -36.61671, Longitud = -64.27236, DireccionTexto = "Arenales 437",         Ciudad = "Santa Rosa", Provincia = "La Pampa" },
             // 5 - La Rioja 307 (esq. Catamarca)
-            new Location { Latitud = -36.6230, Longitud = -64.2840, DireccionTexto = "La Rioja 307",         Ciudad = "Santa Rosa", Provincia = "La Pampa" },
+            new Location { Latitud = -36.61399, Longitud = -64.29120, DireccionTexto = "La Rioja 307",         Ciudad = "Santa Rosa", Provincia = "La Pampa" },
             // 6 - General Pico 464
-            new Location { Latitud = -36.6175, Longitud = -64.2855, DireccionTexto = "General Pico 464",     Ciudad = "Santa Rosa", Provincia = "La Pampa" },
+            new Location { Latitud = -36.62163, Longitud = -64.29390, DireccionTexto = "General Pico 464",     Ciudad = "Santa Rosa", Provincia = "La Pampa" },
             // 7 - Paloma Torcaza 725, Toay
-            new Location { Latitud = -36.6695, Longitud = -64.3710, DireccionTexto = "Paloma Torcaza 725",   Ciudad = "Toay",       Provincia = "La Pampa" },
+            new Location { Latitud = -36.64019, Longitud = -64.37139, DireccionTexto = "Paloma Torcaza 725",   Ciudad = "Toay",       Provincia = "La Pampa" },
         };
         ctx.Locations.AddRange(locations);
         await ctx.SaveChangesAsync();
@@ -126,8 +127,8 @@ public static class DbSeeder
                 TipoPropiedad = TipoPropiedad.Casa, Operacion = TipoOperacion.Venta,
                 Superficie = 114, Ambientes = 5, Dormitorios = 3, Banos = 2,
                 Fotos = ["/images/properties/pico-464/1.jpg", "/images/properties/pico-464/2.jpg",
-                         "/images/properties/pico-464/3.jpg", "/images/properties/pico-464/4.jpg",
-                         "/images/properties/pico-464/5.jpg"],
+                         "/images/properties/pico-464/5.jpg", "/images/properties/pico-464/10.jpg",
+                         "/images/properties/pico-464/18.jpg"],
                 LocationId = locations[6].Id, PublisherId = publisher.Id
             },
             new PropertyListing
@@ -137,10 +138,10 @@ public static class DbSeeder
                 Precio = 195000, Moneda = "USD",
                 TipoPropiedad = TipoPropiedad.Casa, Operacion = TipoOperacion.Venta,
                 Superficie = 239, Ambientes = 7, Dormitorios = 3, Banos = 2,
-                Fotos = ["/images/properties/torcaza-725/1.jpg", "/images/properties/torcaza-725/2.jpg",
-                         "/images/properties/torcaza-725/3.jpg", "/images/properties/torcaza-725/4.jpg",
-                         "/images/properties/torcaza-725/5.jpg", "/images/properties/torcaza-725/6.jpg",
-                         "/images/properties/torcaza-725/7.jpg"],
+                Fotos = ["/images/properties/torcaza-725/1.png", "/images/properties/torcaza-725/2.jpeg",
+                         "/images/properties/torcaza-725/3.jpeg", "/images/properties/torcaza-725/4.jpeg",
+                         "/images/properties/torcaza-725/5.jpeg", "/images/properties/torcaza-725/6.jpeg",
+                         "/images/properties/torcaza-725/7.jpeg"],
                 LocationId = locations[7].Id, PublisherId = publisher.Id
             }
         );
