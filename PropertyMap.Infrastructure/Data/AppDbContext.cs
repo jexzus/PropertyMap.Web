@@ -23,17 +23,31 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
             .Property(p => p.Superficie)
             .HasPrecision(10, 2);
 
+        builder.Entity<PropertyListing>()
+            .Property(p => p.SuperficieCubierta)
+            .HasPrecision(10, 2);
+
+        var stringListComparer = new Microsoft.EntityFrameworkCore.ChangeTracking.ValueComparer<List<string>>(
+            (a, b) => a != null && b != null && a.SequenceEqual(b),
+            v => v.Aggregate(0, (a, s) => HashCode.Combine(a, s.GetHashCode())),
+            v => v.ToList());
+
         // List<string> Fotos se guarda como JSON en una columna nvarchar
         builder.Entity<PropertyListing>()
             .Property(p => p.Fotos)
             .HasConversion(
                 v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>()
+                v => string.IsNullOrWhiteSpace(v) ? new List<string>() : (JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>())
             )
-            .Metadata.SetValueComparer(new Microsoft.EntityFrameworkCore.ChangeTracking.ValueComparer<List<string>>(
-                (a, b) => a != null && b != null && a.SequenceEqual(b),
-                v => v.Aggregate(0, (a, s) => HashCode.Combine(a, s.GetHashCode())),
-                v => v.ToList()
-            ));
+            .Metadata.SetValueComparer(stringListComparer);
+
+        // List<string> Amenities también se guarda como JSON en una columna nvarchar
+        builder.Entity<PropertyListing>()
+            .Property(p => p.Amenities)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => string.IsNullOrWhiteSpace(v) ? new List<string>() : (JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>())
+            )
+            .Metadata.SetValueComparer(stringListComparer);
     }
 }
