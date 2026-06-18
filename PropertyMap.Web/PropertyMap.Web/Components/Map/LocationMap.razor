@@ -41,13 +41,13 @@
             await OnPinMoved.InvokeAsync((lat, lng));
     }
 
-    /// <summary>Permite mover el pin desde el padre (ej: el wizard al cambiar la dirección).</summary>
-    public async Task SetPositionAsync(double lat, double lng)
+    /// <summary>Mueve el pin. Si se pasa zoom, vuela al lugar con ese nivel de zoom.</summary>
+    public async Task SetPositionAsync(double lat, double lng, int? zoom = null)
     {
         Lat = lat; Lng = lng;
         if (init)
         {
-            try { await JS.InvokeVoidAsync("detailMap.setPosition", mapId, lat, lng); }
+            try { await JS.InvokeVoidAsync("detailMap.setPosition", mapId, lat, lng, zoom); }
             catch (JSException) { }
         }
     }

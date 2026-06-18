@@ -120,7 +120,9 @@
         if (!string.IsNullOrEmpty(criteria.Operacion)) filtroOperacion = criteria.Operacion;
         if (!string.IsNullOrEmpty(criteria.TipoProp))  filtroTipo = criteria.TipoProp;
         ApplyFilters();
-        if (!string.IsNullOrWhiteSpace(criteria.Lugar))
+        if (criteria.Lat.HasValue && criteria.Lng.HasValue)
+            await JS.InvokeVoidAsync("mapInterop.flyTo", criteria.Lat.Value, criteria.Lng.Value);
+        else if (!string.IsNullOrWhiteSpace(criteria.Lugar))
             await JS.InvokeVoidAsync("mapInterop.geocodeAndFly", criteria.Lugar);
     }
 

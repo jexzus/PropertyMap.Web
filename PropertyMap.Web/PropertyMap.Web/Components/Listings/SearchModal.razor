@@ -19,7 +19,7 @@
 
             <div class="search-modal-fields">
 
-                @* Lugar *@
+                @* Lugar con autocompletado *@
                 <div class="smodal-field">
                     <label class="smodal-label">¿Dónde querés buscar?</label>
                     <div class="filter-search-wrap" style="max-width:100%;width:100%">
@@ -30,7 +30,29 @@
                         <input class="filter-search-input" style="max-width:100%"
                                type="text"
                                placeholder="Ciudad, barrio, dirección..."
-                               @bind="lugar" />
+                               value="@lugar"
+                               @oninput="OnLugarInput"
+                               @onkeydown="HandleLugarKey"
+                               autocomplete="off"
+                               aria-label="Buscar ciudad o dirección" />
+                        @if (!string.IsNullOrWhiteSpace(lugar))
+                        {
+                            <button class="filter-search-clear" @onclick="ClearLugar" aria-label="Limpiar">×</button>
+                        }
+                        @if (suggestions.Count > 0)
+                        {
+                            <ul class="search-suggestions" role="listbox">
+                                @foreach (var s in suggestions)
+                                {
+                                    <li class="search-suggestion" role="option" @onclick="() => SelectSuggestion(s)">
+                                        <svg class="search-suggestion-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                                        </svg>
+                                        <span class="search-suggestion-label">@s.Label</span>
+                                    </li>
+                                }
+                            </ul>
+                        }
                     </div>
                 </div>
 
@@ -82,20 +104,77 @@
     private string lugar = "";
     private string operacion = "";
     private string tipoProp = "";
+    private double? latSugerida;
+    private double? lngSugerida;
+    private List<SuggestionDto> suggestions = [];
+    private CancellationTokenSource? debounceCts;
+
+    private async Task OnLugarInput(ChangeEventArgs e)
+    {
+        lugar = e.Value?.ToString() ?? "";
+        latSugerida = null;
+        lngSugerida = null;
+        debounceCts?.Cancel();
+
+        if (lugar.Trim().Length < 3)
+        {
+            suggestions = [];
+            return;
+        }
+
+        debounceCts = new CancellationTokenSource();
+        var token = debounceCts.Token;
+        try
+        {
+            await Task.Delay(250, token);
+            var result = await JS.InvokeAsync<SuggestionDto[]>("mapInterop.geocodeSuggest", lugar);
+            if (!token.IsCancellationRequested)
+            {
+                suggestions = result.ToList();
+                StateHasChanged();
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private void SelectSuggestion(SuggestionDto s)
+    {
+        lugar = s.Label;
+        latSugerida = s.Lat;
+        lngSugerida = s.Lng;
+        suggestions = [];
+    }
+
+    private async Task HandleLugarKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") { suggestions = []; await Submit(); }
+        if (e.Key == "Escape") suggestions = [];
+    }
+
+    private void ClearLugar()
+    {
+        lugar = "";
+        latSugerida = null;
+        lngSugerida = null;
+        suggestions = [];
+    }
 
     private async Task Submit()
     {
-        await OnSearch.InvokeAsync(new SearchCriteria(lugar, operacion, tipoProp));
+        suggestions = [];
+        await OnSearch.InvokeAsync(new SearchCriteria(lugar, operacion, tipoProp, latSugerida, lngSugerida));
         await JS.InvokeVoidAsync("sessionStorage.setItem", "pm_searched", "1");
     }
 
     private async Task Close()
     {
-        await OnSearch.InvokeAsync(new SearchCriteria(string.Empty, string.Empty, string.Empty));
+        suggestions = [];
+        await OnSearch.InvokeAsync(new SearchCriteria(string.Empty, string.Empty, string.Empty, null, null));
         await JS.InvokeVoidAsync("sessionStorage.setItem", "pm_searched", "1");
     }
 
     private async Task HandleOverlayClick() => await Close();
 
-    public record SearchCriteria(string Lugar, string Operacion, string TipoProp);
+    public record SuggestionDto(string Label, double Lat, double Lng);
+    public record SearchCriteria(string Lugar, string Operacion, string TipoProp, double? Lat, double? Lng);
 }

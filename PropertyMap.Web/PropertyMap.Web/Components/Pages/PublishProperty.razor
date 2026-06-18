@@ -33,60 +33,105 @@
                 @* ── Paso 0: Operación + tipo ───────────────────────── *@
                 @if (step == 0)
                 {
-                    <h2 class="wizard-h2">¿Qué querés hacer?</h2>
-                    <p class="wizard-hint">Elegí el tipo de operación.</p>
-                    <div class="choice-grid">
-                        @foreach (var op in Enum.GetValues<TipoOperacion>())
-                        {
-                            <button type="button" class="choice-card @(model.Operacion == op ? "selected" : "")"
-                                    @onclick="() => model.Operacion = op">
-                                <span class="choice-emoji">@OpEmoji(op)</span>
-                                <span class="choice-label">@OpLabel(op)</span>
-                            </button>
-                        }
-                    </div>
+                    <h2 class="wizard-h2">Tipo de publicación</h2>
+                    <p class="wizard-hint">Indicá qué querés hacer y qué tipo de propiedad es.</p>
 
-                    <h2 class="wizard-h2" style="margin-top:var(--space-6)">Tipo de propiedad</h2>
-                    <div class="choice-grid choice-grid--compact">
-                        @foreach (var tp in Enum.GetValues<TipoPropiedad>())
-                        {
-                            <button type="button" class="choice-card @(model.Tipo == tp ? "selected" : "")"
-                                    @onclick="() => model.Tipo = tp">
-                                <span class="choice-emoji">@TipoEmoji(tp)</span>
-                                <span class="choice-label">@tp</span>
-                            </button>
-                        }
+                    <div class="field-row" style="margin-top:var(--space-4)">
+                        <label class="field">
+                            <span class="field-label">Operación</span>
+                            <select class="field-input" @bind="model.Operacion" aria-label="Tipo de operación">
+                                @foreach (var op in Enum.GetValues<TipoOperacion>())
+                                {
+                                    <option value="@op">@OpLabel(op)</option>
+                                }
+                            </select>
+                        </label>
+                        <label class="field">
+                            <span class="field-label">Tipo de propiedad</span>
+                            <select class="field-input" @bind="model.Tipo" aria-label="Tipo de propiedad">
+                                @foreach (var tp in Enum.GetValues<TipoPropiedad>())
+                                {
+                                    <option value="@tp">@tp</option>
+                                }
+                            </select>
+                        </label>
                     </div>
                 }
 
                 @* ── Paso 1: Ubicación ──────────────────────────────── *@
                 else if (step == 1)
                 {
-                    <h2 class="wizard-h2">¿Dónde está?</h2>
-                    <p class="wizard-hint">Escribí la dirección: el pin se ubica solo. Podés ajustarlo arrastrándolo.</p>
+                    <div class="location-step">
+                        <div class="location-step__form">
+                            <h2 class="wizard-h2">¿Dónde está?</h2>
+                            <p class="wizard-hint">Buscá la ciudad primero, luego ingresá la dirección.</p>
 
-                    <label class="field">
-                        <span class="field-label">Dirección</span>
-                        <input class="field-input" value="@model.Direccion" @oninput="OnDireccionInput"
-                               placeholder="Ej: Av. España 316" />
-                    </label>
-                    <div class="field-row">
-                        <label class="field">
-                            <span class="field-label">Barrio / Ciudad</span>
-                            <input class="field-input" @bind="model.Ciudad" @bind:after="GeocodeAddressDebounced" placeholder="Santa Rosa" />
-                        </label>
-                        <label class="field">
-                            <span class="field-label">Provincia</span>
-                            <input class="field-input" @bind="model.Provincia" @bind:after="GeocodeAddressDebounced" placeholder="La Pampa" />
-                        </label>
-                    </div>
+                            @* Ciudad con autocompletado *@
+                            <div class="field">
+                                <span class="field-label">Ciudad o localidad</span>
+                                <div class="filter-search-wrap" style="width:100%">
+                                    <svg class="filter-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                                    </svg>
+                                    <input class="filter-search-input" style="padding-left:34px;width:100%"
+                                           type="text"
+                                           placeholder="Ej: Santa Rosa, La Pampa..."
+                                           value="@ciudadTexto"
+                                           @oninput="OnCiudadInput"
+                                           @onkeydown="OnCiudadKey"
+                                           autocomplete="off"
+                                           aria-label="Buscar ciudad" />
+                                    @if (!string.IsNullOrWhiteSpace(ciudadTexto))
+                                    {
+                                        <button class="filter-search-clear" @onclick="ClearCiudad" aria-label="Limpiar ciudad">×</button>
+                                    }
+                                    @if (ciudadSugerencias.Count > 0)
+                                    {
+                                        <ul class="search-suggestions" role="listbox">
+                                            @foreach (var s in ciudadSugerencias)
+                                            {
+                                                <li class="search-suggestion" role="option" @onclick="() => SelectCiudad(s)">
+                                                    <svg class="search-suggestion-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                                                    </svg>
+                                                    <span class="search-suggestion-label">@s.Label</span>
+                                                </li>
+                                            }
+                                        </ul>
+                                    }
+                                </div>
+                                @if (!string.IsNullOrEmpty(model.Ciudad))
+                                {
+                                    <span class="field-hint field-hint--ok">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                                        @model.Ciudad@(string.IsNullOrEmpty(model.Provincia) ? "" : $", {model.Provincia}")
+                                    </span>
+                                }
+                            </div>
 
-                    <div class="field-label" style="margin-top:var(--space-3)">Ubicación exacta en el mapa</div>
-                    <div class="wizard-map">
-                        <LocationMap @ref="locMap" Lat="model.Lat" Lng="model.Lng" Zoom="14"
-                                     Height="320px" Draggable="true" OnPinMoved="OnPinMoved" />
+                            @* Dirección (solo habilitada si hay ciudad) *@
+                            <label class="field" style="margin-top:var(--space-4)">
+                                <span class="field-label">Dirección</span>
+                                <input class="field-input @(string.IsNullOrEmpty(model.Ciudad) ? "field-input--disabled" : "")"
+                                       value="@model.Direccion"
+                                       @oninput="OnDireccionInput"
+                                       placeholder="@(string.IsNullOrEmpty(model.Ciudad) ? "Primero elegí la ciudad" : "Ej: Av. España 316")"
+                                       disabled="@(string.IsNullOrEmpty(model.Ciudad))" />
+                            </label>
+
+                            <p class="wizard-coords" style="margin-top:var(--space-4)">
+                                @if (model.Lat != -36.6200 || model.Lng != -64.2895)
+                                {
+                                    <span>📍 @model.Lat.ToString("F5"), @model.Lng.ToString("F5")</span>
+                                }
+                            </p>
+                        </div>
+
+                        <div class="location-step__map">
+                            <LocationMap @ref="locMap" Lat="model.Lat" Lng="model.Lng" Zoom="@(string.IsNullOrEmpty(model.Ciudad) ? 5 : 14)"
+                                         Height="100%" Draggable="true" OnPinMoved="OnPinMoved" />
+                        </div>
                     </div>
-                    <p class="wizard-coords">Lat: @model.Lat.ToString("F5") · Lng: @model.Lng.ToString("F5")</p>
                 }
 
                 @* ── Paso 2: Características ─────────────────────────── *@
@@ -378,6 +423,66 @@
         await SaveDraft();
     }
 
+    // ── Ciudad autocomplete ───────────────────────────────────────────────
+    private string ciudadTexto = "";
+    private List<GeoResult> ciudadSugerencias = [];
+    private CancellationTokenSource? ciudadCts;
+
+    private async Task OnCiudadInput(ChangeEventArgs e)
+    {
+        ciudadTexto = e.Value?.ToString() ?? "";
+        model.Ciudad = "";   // reset hasta confirmar selección
+        ciudadCts?.Cancel();
+
+        if (ciudadTexto.Trim().Length < 3) { ciudadSugerencias = []; return; }
+
+        ciudadCts = new CancellationTokenSource();
+        var token = ciudadCts.Token;
+        try
+        {
+            await Task.Delay(250, token);
+            var results = await JS.InvokeAsync<GeoResult[]>("mapInterop.geocodeSuggest", ciudadTexto + ", Argentina");
+            if (!token.IsCancellationRequested)
+            {
+                ciudadSugerencias = results.Take(5).ToList();
+                StateHasChanged();
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private async Task SelectCiudad(GeoResult s)
+    {
+        ciudadTexto = s.Label;
+        ciudadSugerencias = [];
+
+        // Extraer ciudad y provincia desde el label de Nominatim/Mapbox.
+        // Ejemplo: "Santa Rosa, Departamento Capital, La Pampa, Argentina"
+        var parts = s.Label.Split(',', StringSplitOptions.TrimEntries);
+        model.Ciudad = parts.Length > 0 ? parts[0] : s.Label;
+        model.Provincia = parts.Length > 2 ? parts[^2] : (parts.Length > 1 ? parts[1] : "");
+
+        // Centrar mapa en la ciudad con zoom de ciudad.
+        model.Lat = s.Lat;
+        model.Lng = s.Lng;
+        if (locMap is not null) await locMap.SetPositionAsync(s.Lat, s.Lng, 13);
+        await SaveDraft();
+    }
+
+    private void OnCiudadKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") ciudadSugerencias = [];
+    }
+
+    private void ClearCiudad()
+    {
+        ciudadTexto = "";
+        model.Ciudad = "";
+        model.Provincia = "";
+        ciudadSugerencias = [];
+    }
+
+    // ── Dirección geocodificada ───────────────────────────────────────────
     private CancellationTokenSource? geoCts;
 
     private async Task OnDireccionInput(ChangeEventArgs e)
@@ -386,11 +491,11 @@
         await GeocodeAddressDebounced();
     }
 
-    // Geocodifica la dirección escrita y reposiciona el pin (como Google Maps).
+    // Geocodifica la dirección restringida a la ciudad ya seleccionada.
     private async Task GeocodeAddressDebounced()
     {
         geoCts?.Cancel();
-        if (model.Direccion.Trim().Length < 4) return;
+        if (model.Direccion.Trim().Length < 4 || string.IsNullOrEmpty(model.Ciudad)) return;
 
         geoCts = new CancellationTokenSource();
         var token = geoCts.Token;
@@ -406,11 +511,11 @@
             {
                 model.Lat = first.Lat;
                 model.Lng = first.Lng;
-                if (locMap is not null) await locMap.SetPositionAsync(first.Lat, first.Lng);
+                if (locMap is not null) await locMap.SetPositionAsync(first.Lat, first.Lng, 16);
                 await SaveDraft();
             }
         }
-        catch (OperationCanceledException) { /* nueva tecla: se cancela esta búsqueda */ }
+        catch (OperationCanceledException) { }
     }
 
     private record GeoResult(string Label, double Lat, double Lng);
@@ -541,22 +646,6 @@
         TipoOperacion.Alquiler => "Alquiler",
         TipoOperacion.AlquilerTemporario => "Temporario",
         _ => op.ToString()
-    };
-    private static string OpEmoji(TipoOperacion op) => op switch
-    {
-        TipoOperacion.Venta => "🏷️",
-        TipoOperacion.Alquiler => "🔑",
-        TipoOperacion.AlquilerTemporario => "🗓️",
-        _ => "🏠"
-    };
-    private static string TipoEmoji(TipoPropiedad t) => t switch
-    {
-        TipoPropiedad.Departamento => "🏢",
-        TipoPropiedad.Casa => "🏠",
-        TipoPropiedad.Terreno => "🌳",
-        TipoPropiedad.Local => "🏬",
-        TipoPropiedad.Oficina => "💼",
-        _ => "📦"
     };
 
     public class WizardModel

@@ -356,11 +356,12 @@ window.detailMap = {
     this._maps[elementId] = { map, marker };
   },
 
-  setPosition(elementId, lat, lng) {
+  setPosition(elementId, lat, lng, zoom) {
     const inst = this._maps[elementId];
     if (!inst) return;
     inst.marker.setLngLat([lng, lat]);
-    inst.map.setCenter([lng, lat]);
+    if (zoom != null) inst.map.flyTo({ center: [lng, lat], zoom });
+    else inst.map.setCenter([lng, lat]);
   },
 
   dispose(elementId) {
