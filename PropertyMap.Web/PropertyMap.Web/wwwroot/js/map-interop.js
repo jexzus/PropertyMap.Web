@@ -84,8 +84,7 @@ window.mapInterop = {
     if (this._searchMarker) { this._searchMarker.remove(); this._searchMarker = null; }
   },
 
-  // Sugerencias de direcciones/lugares mientras se escribe.
-  // Sin token usa Nominatim (OpenStreetMap); con token, Mapbox v6.
+  // Sugerencias de lugares (ciudades, barrios) mientras se escribe.
   async geocodeSuggest(query) {
     if (!query || query.trim().length < 3) return [];
     try {
@@ -104,6 +103,43 @@ window.mapInterop = {
       }
     } catch (e) {
       console.warn('geocodeSuggest error', e);
+      return [];
+    }
+  },
+
+  // Geocodificación precisa de dirección con número.
+  // bbox restringe DUROS los resultados al área de la ciudad — proximity solo sugiere, bbox impone.
+  async geocodeAddress(query, proximityLng, proximityLat, bboxMinLng, bboxMinLat, bboxMaxLng, bboxMaxLat) {
+    if (!query || query.trim().length < 3) return [];
+    try {
+      const nominatimSearch = async () => {
+        let url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=3&countrycodes=ar&accept-language=es`;
+        if (bboxMinLng != null)
+          url += `&viewbox=${bboxMinLng},${bboxMaxLat},${bboxMaxLng},${bboxMinLat}&bounded=1`;
+        const json = await (await fetch(url)).json();
+        return (json || []).map(r => ({ label: r.display_name, lat: parseFloat(r.lat), lng: parseFloat(r.lon) }));
+      };
+
+      if (window.MAP_FALLBACK || !window.MAPBOX_TOKEN) {
+        return await nominatimSearch();
+      } else {
+        let url = `https://api.mapbox.com/search/geocode/v6/forward?q=${encodeURIComponent(query)}&access_token=${window.MAPBOX_TOKEN}&language=es&country=ar&limit=3`;
+        if (proximityLng != null && proximityLat != null)
+          url += `&proximity=${proximityLng},${proximityLat}`;
+        if (bboxMinLng != null)
+          url += `&bbox=${bboxMinLng},${bboxMinLat},${bboxMaxLng},${bboxMaxLat}`;
+        const json = await (await fetch(url)).json();
+        const results = (json.features || []).map(f => ({
+          label: (f.properties && (f.properties.full_address || f.properties.name)) || '',
+          lat: f.geometry.coordinates[1],
+          lng: f.geometry.coordinates[0]
+        }));
+        // Si Mapbox no encuentra nada, intentar con Nominatim
+        if (results.length === 0) return await nominatimSearch();
+        return results;
+      }
+    } catch (e) {
+      console.warn('geocodeAddress error', e);
       return [];
     }
   },

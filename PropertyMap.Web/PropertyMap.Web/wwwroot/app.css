@@ -1277,6 +1277,38 @@ html, body {
   height: 100% !important;
 }
 
+/* Map drag hint */
+.map-drag-hint {
+  position: absolute;
+  bottom: var(--space-4);
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: oklch(0.175 0.010 20 / 0.75);
+  color: #fff;
+  font-size: var(--text-xs);
+  border-radius: var(--radius-full);
+  pointer-events: none;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+}
+
+/* Field with inline button */
+.field-with-btn {
+  display: flex;
+  gap: var(--space-2);
+}
+.field-with-btn .field-input { flex: 1; min-width: 0; }
+.btn-buscar {
+  flex-shrink: 0;
+  padding: 0 var(--space-4);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
 /* Field helpers */
 .field-input--disabled { opacity: 0.5; cursor: not-allowed; }
 .field-hint {

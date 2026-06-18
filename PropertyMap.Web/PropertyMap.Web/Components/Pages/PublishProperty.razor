@@ -109,27 +109,51 @@
                                 }
                             </div>
 
-                            @* Dirección (solo habilitada si hay ciudad) *@
-                            <label class="field" style="margin-top:var(--space-4)">
+                            @* Dirección con botón Buscar *@
+                            <div class="field" style="margin-top:var(--space-4)">
                                 <span class="field-label">Dirección</span>
-                                <input class="field-input @(string.IsNullOrEmpty(model.Ciudad) ? "field-input--disabled" : "")"
-                                       value="@model.Direccion"
-                                       @oninput="OnDireccionInput"
-                                       placeholder="@(string.IsNullOrEmpty(model.Ciudad) ? "Primero elegí la ciudad" : "Ej: Av. España 316")"
-                                       disabled="@(string.IsNullOrEmpty(model.Ciudad))" />
-                            </label>
+                                <div class="field-with-btn">
+                                    <input class="field-input @(string.IsNullOrEmpty(model.Ciudad) ? "field-input--disabled" : "")"
+                                           value="@model.Direccion"
+                                           @oninput="OnDireccionInput"
+                                           @onkeydown="OnDireccionKey"
+                                           placeholder="@(string.IsNullOrEmpty(model.Ciudad) ? "Primero elegí la ciudad" : "Calle y número, Ej: Telén 2900")"
+                                           disabled="@(string.IsNullOrEmpty(model.Ciudad))"
+                                           autocomplete="off" />
+                                    <button type="button" class="btn-primary btn-buscar"
+                                            @onclick="GeocodeAddressNow"
+                                            disabled="@(string.IsNullOrEmpty(model.Ciudad) || string.IsNullOrWhiteSpace(model.Direccion) || geocodingAddress)">
+                                        @(geocodingAddress ? "..." : "Buscar")
+                                    </button>
+                                </div>
+                            </div>
 
-                            <p class="wizard-coords" style="margin-top:var(--space-4)">
-                                @if (model.Lat != -36.6200 || model.Lng != -64.2895)
-                                {
-                                    <span>📍 @model.Lat.ToString("F5"), @model.Lng.ToString("F5")</span>
-                                }
-                            </p>
+                            @* Coordenadas manuales *@
+                            <div class="field" style="margin-top:var(--space-5)">
+                                <span class="field-label">O ingresá coordenadas directamente</span>
+                                <input class="field-input" type="text"
+                                       placeholder="Ej: -36.62092, -64.28991"
+                                       value="@coordsTexto"
+                                       @onchange="OnCoordsChange"
+                                       autocomplete="off" />
+                                <span class="field-hint" style="margin-top:var(--space-1)">Latitud, Longitud separadas por coma</span>
+                            </div>
+
+                            @if (geocodeError is not null)
+                            {
+                                <p class="field-hint" style="color:var(--color-error);margin-top:var(--space-2)">@geocodeError</p>
+                            }
                         </div>
 
                         <div class="location-step__map">
                             <LocationMap @ref="locMap" Lat="model.Lat" Lng="model.Lng" Zoom="@(string.IsNullOrEmpty(model.Ciudad) ? 5 : 14)"
                                          Height="100%" Draggable="true" OnPinMoved="OnPinMoved" />
+                            <div class="map-drag-hint">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/>
+                                </svg>
+                                Arrastrá el pin para ajustar la posición exacta
+                            </div>
                         </div>
                     </div>
                 }
@@ -358,8 +382,16 @@
                     var saved = System.Text.Json.JsonSerializer.Deserialize<WizardModel>(json);
                     if (saved is not null)
                     {
-                        // Las fotos (base64) no se persisten por tamaño; se conservan los datos.
                         model = saved;
+                        if (!string.IsNullOrEmpty(model.Ciudad))
+                            ciudadTexto = string.IsNullOrEmpty(model.Provincia)
+                                ? model.Ciudad
+                                : $"{model.Ciudad}, {model.Provincia}";
+                        // Restaurar centro de ciudad = posición guardada (proxy razonable)
+                        ciudadLat = model.Lat;
+                        ciudadLng = model.Lng;
+                        if (model.Lat != 0 || model.Lng != 0)
+                            coordsTexto = $"{model.Lat.ToString("F5", System.Globalization.CultureInfo.InvariantCulture)}, {model.Lng.ToString("F5", System.Globalization.CultureInfo.InvariantCulture)}";
                         StateHasChanged();
                     }
                 }
@@ -420,13 +452,19 @@
     private async Task OnPinMoved((double Lat, double Lng) pos)
     {
         model.Lat = pos.Lat; model.Lng = pos.Lng;
+        coordsTexto = $"{pos.Lat.ToString("F5", System.Globalization.CultureInfo.InvariantCulture)}, {pos.Lng.ToString("F5", System.Globalization.CultureInfo.InvariantCulture)}";
         await SaveDraft();
     }
 
     // ── Ciudad autocomplete ───────────────────────────────────────────────
     private string ciudadTexto = "";
+    private double ciudadLat;
+    private double ciudadLng;
     private List<GeoResult> ciudadSugerencias = [];
     private CancellationTokenSource? ciudadCts;
+    private bool geocodingAddress;
+    private string? geocodeError;
+    private string coordsTexto = "";
 
     private async Task OnCiudadInput(ChangeEventArgs e)
     {
@@ -462,9 +500,14 @@
         model.Ciudad = parts.Length > 0 ? parts[0] : s.Label;
         model.Provincia = parts.Length > 2 ? parts[^2] : (parts.Length > 1 ? parts[1] : "");
 
+        // Guardar centro de la ciudad para usar como proximity en geocodificación de calle.
+        ciudadLat = s.Lat;
+        ciudadLng = s.Lng;
+
         // Centrar mapa en la ciudad con zoom de ciudad.
         model.Lat = s.Lat;
         model.Lng = s.Lng;
+        coordsTexto = $"{s.Lat.ToString("F5", System.Globalization.CultureInfo.InvariantCulture)}, {s.Lng.ToString("F5", System.Globalization.CultureInfo.InvariantCulture)}";
         if (locMap is not null) await locMap.SetPositionAsync(s.Lat, s.Lng, 13);
         await SaveDraft();
     }
@@ -483,39 +526,79 @@
     }
 
     // ── Dirección geocodificada ───────────────────────────────────────────
-    private CancellationTokenSource? geoCts;
-
-    private async Task OnDireccionInput(ChangeEventArgs e)
+    private void OnDireccionInput(ChangeEventArgs e)
     {
         model.Direccion = e.Value?.ToString() ?? "";
-        await GeocodeAddressDebounced();
+        geocodeError = null;
     }
 
-    // Geocodifica la dirección restringida a la ciudad ya seleccionada.
-    private async Task GeocodeAddressDebounced()
+    private async Task OnDireccionKey(KeyboardEventArgs e)
     {
-        geoCts?.Cancel();
-        if (model.Direccion.Trim().Length < 4 || string.IsNullOrEmpty(model.Ciudad)) return;
+        if (e.Key == "Enter") await GeocodeAddressNow();
+    }
 
-        geoCts = new CancellationTokenSource();
-        var token = geoCts.Token;
+    // Búsqueda manual (botón o Enter). La dirección SIEMPRE tiene prioridad.
+    // bbox solo se aplica cuando la ciudad fue seleccionada desde sugerencias (coords != 0).
+    private async Task GeocodeAddressNow()
+    {
+        if (string.IsNullOrWhiteSpace(model.Direccion) || string.IsNullOrEmpty(model.Ciudad)) return;
+        geocodingAddress = true;
+        geocodeError = null;
         try
         {
-            await Task.Delay(600, token);
             var query = $"{model.Direccion}, {model.Ciudad}, {model.Provincia}, Argentina";
-            var results = await JS.InvokeAsync<GeoResult[]>("mapInterop.geocodeSuggest", query);
-            if (token.IsCancellationRequested) return;
+            GeoResult[]? results;
+            if (ciudadLat != 0 && ciudadLng != 0)
+            {
+                const double delta = 0.15;
+                results = await JS.InvokeAsync<GeoResult[]>(
+                    "mapInterop.geocodeAddress", query,
+                    ciudadLng, ciudadLat,
+                    ciudadLng - delta, ciudadLat - delta,
+                    ciudadLng + delta, ciudadLat + delta);
+            }
+            else
+            {
+                results = await JS.InvokeAsync<GeoResult[]>(
+                    "mapInterop.geocodeAddress", query,
+                    (object?)null, (object?)null,
+                    (object?)null, (object?)null, (object?)null, (object?)null);
+            }
 
-            var first = results.FirstOrDefault();
+            var first = results?.FirstOrDefault();
             if (first is not null)
             {
                 model.Lat = first.Lat;
                 model.Lng = first.Lng;
-                if (locMap is not null) await locMap.SetPositionAsync(first.Lat, first.Lng, 16);
+                coordsTexto = $"{first.Lat.ToString("F5", System.Globalization.CultureInfo.InvariantCulture)}, {first.Lng.ToString("F5", System.Globalization.CultureInfo.InvariantCulture)}";
+                if (locMap is not null) await locMap.SetPositionAsync(first.Lat, first.Lng, 17);
                 await SaveDraft();
             }
+            else
+            {
+                geocodeError = "No se encontró la dirección. Probá ajustar el pin manualmente o usar coordenadas.";
+            }
         }
-        catch (OperationCanceledException) { }
+        catch { geocodeError = "Error al buscar la dirección."; }
+        finally { geocodingAddress = false; }
+    }
+
+    private async Task OnCoordsChange(ChangeEventArgs e)
+    {
+        coordsTexto = e.Value?.ToString() ?? "";
+        // Acepta formatos: "-36.620, -64.289" o "-36.620 -64.289" o "-36.620,-64.289"
+        var raw = coordsTexto.Replace(';', ',');
+        var sep = raw.Contains(',') ? ',' : ' ';
+        var parts = raw.Split(sep, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length >= 2 &&
+            double.TryParse(parts[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var lat) &&
+            double.TryParse(parts[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var lng))
+        {
+            model.Lat = lat;
+            model.Lng = lng;
+            if (locMap is not null) await locMap.SetPositionAsync(lat, lng, 17);
+            await SaveDraft();
+        }
     }
 
     private record GeoResult(string Label, double Lat, double Lng);
