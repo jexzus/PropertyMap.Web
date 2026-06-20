@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using PropertyMap.Core.Entities;
 using PropertyMap.Core.Interfaces;
 using PropertyMap.Infrastructure.Data;
 using PropertyMap.Infrastructure.Repositories;
@@ -73,13 +74,14 @@ app.MapRazorComponents<App>()
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
     const int maxAttempts = 10;
     for (int attempt = 1; ; attempt++)
     {
         try
         {
             await db.Database.MigrateAsync();
-            await PropertyMap.Infrastructure.Data.DbSeeder.SeedAsync(db);
+            await PropertyMap.Infrastructure.Data.DbSeeder.SeedAsync(db, userManager);
             break;
         }
         catch (Microsoft.Data.SqlClient.SqlException) when (attempt < maxAttempts)

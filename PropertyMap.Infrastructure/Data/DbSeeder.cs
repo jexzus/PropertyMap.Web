@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using PropertyMap.Core.Entities;
 using PropertyMap.Core.Enums;
@@ -6,9 +7,29 @@ namespace PropertyMap.Infrastructure.Data;
 
 public static class DbSeeder
 {
-    public static async Task SeedAsync(AppDbContext ctx)
+    public static async Task SeedAsync(AppDbContext context, UserManager<ApplicationUser> userManager)
     {
-        if (await ctx.PropertyListings.AnyAsync()) return;
+        if (await context.PropertyListings.AnyAsync()) return;
+
+        // Seed publisher user
+        var publisherUser = new ApplicationUser
+        {
+            Id = "seed-publisher-user",
+            UserName = "contacto@savoiaaltolaguirre.com.ar",
+            Email = "contacto@savoiaaltolaguirre.com.ar",
+            EmailConfirmed = true,
+            Nombre = "Savoia Alto",
+            Apellido = "Laguirre",
+            Estado = EstadoUsuario.Activo,
+            FechaRegistro = DateTime.UtcNow,
+            PhoneNumber = "+54 9 2954 520117"
+        };
+
+        if (await userManager.FindByIdAsync(publisherUser.Id) == null)
+        {
+            await userManager.CreateAsync(publisherUser, "Savoia123!");
+            await userManager.AddToRoleAsync(publisherUser, "Publisher");
+        }
 
         var publisher = new Publisher
         {
@@ -16,135 +37,73 @@ public static class DbSeeder
             Email = "contacto@savoiaaltolaguirre.com.ar",
             Telefono = "+54 9 2954 520117",
             Tipo = TipoPublicador.Inmobiliaria,
-            UserId = "seed-user"
+            UserId = publisherUser.Id
         };
-        ctx.Publishers.Add(publisher);
+        context.Publishers.Add(publisher);
+        await context.SaveChangesAsync();
 
-        var locations = new[]
+        // Seed locations
+        var locations = new List<Location>
         {
-            // Coordenadas geocodificadas (OpenStreetMap) para que el pin coincida con la dirección.
-            // 0 - Armesto 586 (Inti Hue, Nueva Vista)
-            new Location { Latitud = -36.64269, Longitud = -64.31722, DireccionTexto = "Armesto 586",          Ciudad = "Santa Rosa", Provincia = "La Pampa" },
-            // 1 - Av. España 316 (esq. Dante Alighieri)
-            new Location { Latitud = -36.62551, Longitud = -64.28710, DireccionTexto = "Av. España 316",       Ciudad = "Santa Rosa", Provincia = "La Pampa" },
-            // 2 - Emilio Civit 2765
-            new Location { Latitud = -36.64751, Longitud = -64.31145, DireccionTexto = "Emilio Civit 2765",    Ciudad = "Santa Rosa", Provincia = "La Pampa" },
-            // 3 - Tierra del Fuego 133
-            new Location { Latitud = -36.60744, Longitud = -64.28384, DireccionTexto = "Tierra del Fuego 133", Ciudad = "Santa Rosa", Provincia = "La Pampa" },
-            // 4 - Arenales 437 (Villa Alonso)
-            new Location { Latitud = -36.61671, Longitud = -64.27236, DireccionTexto = "Arenales 437",         Ciudad = "Santa Rosa", Provincia = "La Pampa" },
-            // 5 - La Rioja 307 (esq. Catamarca)
-            new Location { Latitud = -36.61399, Longitud = -64.29120, DireccionTexto = "La Rioja 307",         Ciudad = "Santa Rosa", Provincia = "La Pampa" },
-            // 6 - General Pico 464
-            new Location { Latitud = -36.62163, Longitud = -64.29390, DireccionTexto = "General Pico 464",     Ciudad = "Santa Rosa", Provincia = "La Pampa" },
-            // 7 - Paloma Torcaza 725, Toay
-            new Location { Latitud = -36.64019, Longitud = -64.37139, DireccionTexto = "Paloma Torcaza 725",   Ciudad = "Toay",       Provincia = "La Pampa" },
+            new() { DireccionTexto = "Armesto 586", Ciudad = "Santa Rosa", Provincia = "La Pampa", Latitud = -36.64269, Longitud = -64.31722 },
+            new() { DireccionTexto = "Av. España 316", Ciudad = "Santa Rosa", Provincia = "La Pampa", Latitud = -36.62551, Longitud = -64.28710 },
+            new() { DireccionTexto = "Emilio Civit 2765", Ciudad = "Santa Rosa", Provincia = "La Pampa", Latitud = -36.64751, Longitud = -64.31145 },
+            new() { DireccionTexto = "Tierra del Fuego 133", Ciudad = "Santa Rosa", Provincia = "La Pampa", Latitud = -36.60744, Longitud = -64.28384 },
+            new() { DireccionTexto = "Arenales 437", Ciudad = "Santa Rosa", Provincia = "La Pampa", Latitud = -36.61671, Longitud = -64.27236 },
+            new() { DireccionTexto = "La Rioja 307", Ciudad = "Santa Rosa", Provincia = "La Pampa", Latitud = -36.61399, Longitud = -64.29120 },
+            new() { DireccionTexto = "General Pico 464", Ciudad = "Santa Rosa", Provincia = "La Pampa", Latitud = -36.62163, Longitud = -64.29390 },
+            new() { DireccionTexto = "Paloma Torcaza 725", Ciudad = "Toay", Provincia = "La Pampa", Latitud = -36.64019, Longitud = -64.37139 }
         };
-        ctx.Locations.AddRange(locations);
-        await ctx.SaveChangesAsync();
+        context.Locations.AddRange(locations);
+        await context.SaveChangesAsync();
 
-        ctx.PropertyListings.AddRange(
-            new PropertyListing
+        // Seed listings with PropertyImage rows
+        var listingsData = new[]
+        {
+            new { Titulo = "Casa en Nueva Vista - Inti Hue", Tipo = TipoPropiedad.Casa, Op = TipoOperacion.Venta, Precio = 85000m, Moneda = "USD", Sup = 97m, Dorms = 1, Banos = 1, Ambientes = 2, Slug = "armesto-586", LocationIndex = 0, FotoCount = 3 },
+            new { Titulo = "Torre Av. España - Depto 2 dorm", Tipo = TipoPropiedad.Departamento, Op = TipoOperacion.Venta, Precio = 168000m, Moneda = "USD", Sup = 168m, Dorms = 2, Banos = 2, Ambientes = 4, Slug = "av-espana-316", LocationIndex = 1, FotoCount = 4 },
+            new { Titulo = "Casa 3 dorm con cochera - E. Civit", Tipo = TipoPropiedad.Casa, Op = TipoOperacion.Venta, Precio = 120000m, Moneda = "USD", Sup = 142m, Dorms = 3, Banos = 2, Ambientes = 5, Slug = "emilio-civit-2765", LocationIndex = 2, FotoCount = 2 },
+            new { Titulo = "Depto 1 dorm - Tierra del Fuego", Tipo = TipoPropiedad.Departamento, Op = TipoOperacion.Venta, Precio = 55000m, Moneda = "USD", Sup = 71m, Dorms = 1, Banos = 1, Ambientes = 2, Slug = "tierra-del-fuego-133", LocationIndex = 3, FotoCount = 3 },
+            new { Titulo = "Monoambiente - Villa Alonso", Tipo = TipoPropiedad.Monoambiente, Op = TipoOperacion.Venta, Precio = 35000m, Moneda = "USD", Sup = 28m, Dorms = 1, Banos = 1, Ambientes = 1, Slug = "arenales-437", LocationIndex = 4, FotoCount = 2 },
+            new { Titulo = "Depto céntrico - La Rioja esq. Catamarca", Tipo = TipoPropiedad.Departamento, Op = TipoOperacion.Alquiler, Precio = 180000m, Moneda = "ARS", Sup = 32m, Dorms = 1, Banos = 1, Ambientes = 2, Slug = "la-rioja-307", LocationIndex = 5, FotoCount = 3 },
+            new { Titulo = "Casa 3 dorm con pileta - Gral. Pico", Tipo = TipoPropiedad.Casa, Op = TipoOperacion.Venta, Precio = 98000m, Moneda = "USD", Sup = 114m, Dorms = 3, Banos = 2, Ambientes = 5, Slug = "pico-464", LocationIndex = 6, FotoCount = 4 },
+            new { Titulo = "Casa premium con pileta - Toay", Tipo = TipoPropiedad.Casa, Op = TipoOperacion.Venta, Precio = 195000m, Moneda = "USD", Sup = 239m, Dorms = 3, Banos = 2, Ambientes = 7, Slug = "torcaza-725", LocationIndex = 7, FotoCount = 5 }
+        };
+
+        foreach (var data in listingsData)
+        {
+            var listing = new PropertyListing
             {
-                Titulo = "Casa en Nueva Vista - Inti Hue",
-                Descripcion = "Amplio living comedor con salida a galería y parrilla, cocina, baño, dormitorio y patio. Construcción moderna con pisos de porcelanato, carpinterías PVC con DVH, mesada de granito negro. Terreno 588m² (15x39.20). Superficie construida 97m².",
-                Precio = 85000, Moneda = "USD",
-                TipoPropiedad = TipoPropiedad.Casa, Operacion = TipoOperacion.Venta,
-                Superficie = 97, Ambientes = 3, Dormitorios = 1, Banos = 1,
-                Fotos = ["/images/properties/armesto-586/1.jpg", "/images/properties/armesto-586/2.jpg",
-                         "/images/properties/armesto-586/3.jpg", "/images/properties/armesto-586/4.jpg",
-                         "/images/properties/armesto-586/5.jpg", "/images/properties/armesto-586/6.jpg",
-                         "/images/properties/armesto-586/7.jpg", "/images/properties/armesto-586/8.jpg"],
-                LocationId = locations[0].Id, PublisherId = publisher.Id
-            },
-            new PropertyListing
+                Publisher = publisher,
+                Location = locations[data.LocationIndex],
+                Titulo = data.Titulo,
+                Descripcion = $"Propiedad en {locations[data.LocationIndex].DireccionTexto}, {locations[data.LocationIndex].Ciudad}.",
+                Precio = data.Precio,
+                Moneda = data.Moneda,
+                TipoPropiedad = data.Tipo,
+                Operacion = data.Op,
+                Superficie = data.Sup,
+                Ambientes = data.Ambientes,
+                Dormitorios = data.Dorms,
+                Banos = data.Banos,
+                Cochera = false,
+                Estado = EstadoPublicacion.Publicada,
+                FechaPublicacion = DateTime.UtcNow
+            };
+
+            for (int i = 0; i < data.FotoCount; i++)
             {
-                Titulo = "Torre Av. España - Depto 2 dorm con amenities",
-                Descripcion = "Departamentos de 2 y 3 dormitorios en torre. Estar-comedor amplio, cocina integrada, balcón-terraza, 2 baños. Amenities: SUM con parrilla, piscina climatizada en último piso, gimnasio, sauna y domótica. Cocheras en 2 subsuelos.",
-                Precio = 168000, Moneda = "USD",
-                TipoPropiedad = TipoPropiedad.Departamento, Operacion = TipoOperacion.Venta,
-                Superficie = 168, Ambientes = 4, Dormitorios = 2, Banos = 2,
-                Fotos = ["/images/properties/av-espana-316/1.jpeg", "/images/properties/av-espana-316/2.png",
-                         "/images/properties/av-espana-316/3.png",  "/images/properties/av-espana-316/4.png",
-                         "/images/properties/av-espana-316/5.png",  "/images/properties/av-espana-316/6.png",
-                         "/images/properties/av-espana-316/7.png",  "/images/properties/av-espana-316/8.png"],
-                LocationId = locations[1].Id, PublisherId = publisher.Id
-            },
-            new PropertyListing
-            {
-                Titulo = "Casa 3 dorm con cochera - E. Civit",
-                Descripcion = "Estar comedor amplio y luminoso, cocina amoblada, lavadero, 3 dormitorios con placares, 2 baños completos, galería, patio y cochera. Carpinterías PVC con DVH. Entrega Julio 2026. Terreno 600m², construida 142m².",
-                Precio = 120000, Moneda = "USD",
-                TipoPropiedad = TipoPropiedad.Casa, Operacion = TipoOperacion.Venta,
-                Superficie = 142, Ambientes = 6, Dormitorios = 3, Banos = 2,
-                Fotos = ["/images/properties/emilio-civit-2765/1.jpg", "/images/properties/emilio-civit-2765/2.jpg",
-                         "/images/properties/emilio-civit-2765/3.jpg", "/images/properties/emilio-civit-2765/4.jpg",
-                         "/images/properties/emilio-civit-2765/5.jpg", "/images/properties/emilio-civit-2765/6.jpg",
-                         "/images/properties/emilio-civit-2765/7.jpg", "/images/properties/emilio-civit-2765/8.jpg"],
-                LocationId = locations[2].Id, PublisherId = publisher.Id
-            },
-            new PropertyListing
-            {
-                Titulo = "Depto 1 dorm con cochera y patio - Tierra del Fuego",
-                Descripcion = "Amplio departamento con cochera y patio interno, a una cuadra y media de Av. Spinetto. Superficie 71m². Excelente ubicación, zona tranquila.",
-                Precio = 55000, Moneda = "USD",
-                TipoPropiedad = TipoPropiedad.Departamento, Operacion = TipoOperacion.Venta,
-                Superficie = 71, Ambientes = 2, Dormitorios = 1, Banos = 1,
-                Fotos = ["/images/properties/tierra-del-fuego-133/1.jpeg", "/images/properties/tierra-del-fuego-133/2.jpeg",
-                         "/images/properties/tierra-del-fuego-133/3.jpeg", "/images/properties/tierra-del-fuego-133/4.jpeg",
-                         "/images/properties/tierra-del-fuego-133/5.jpeg"],
-                LocationId = locations[3].Id, PublisherId = publisher.Id
-            },
-            new PropertyListing
-            {
-                Titulo = "Monoambiente con cochera - Villa Alonso",
-                Descripcion = "Monoambiente de 28m² en 2do piso con cochera cubierta al frente. Zona buscada por estudiantes, tranquila. Ambiente luminoso con sector dormitorio y estar, cocina separada, pequeño balcón. Construcción de calidad.",
-                Precio = 35000, Moneda = "USD",
-                TipoPropiedad = TipoPropiedad.Departamento, Operacion = TipoOperacion.Venta,
-                Superficie = 28, Ambientes = 1, Dormitorios = 1, Banos = 1,
-                Fotos = ["/images/properties/arenales-437/1.jpg", "/images/properties/arenales-437/2.jpg",
-                         "/images/properties/arenales-437/3.jpg", "/images/properties/arenales-437/4.jpg",
-                         "/images/properties/arenales-437/5.jpg", "/images/properties/arenales-437/6.jpg"],
-                LocationId = locations[4].Id, PublisherId = publisher.Id
-            },
-            new PropertyListing
-            {
-                Titulo = "Depto céntrico - La Rioja esq. Catamarca",
-                Descripcion = "Cocina, comedor y habitación integrados, baño. Segundo piso por escaleras. Muy buen estado, complejo tranquilo cerca del centro. Superficie 32m². Expensas $77.000.",
-                Precio = 180000, Moneda = "ARS",
-                TipoPropiedad = TipoPropiedad.Departamento, Operacion = TipoOperacion.Alquiler,
-                Superficie = 32, Ambientes = 1, Dormitorios = 1, Banos = 1,
-                Fotos = ["/images/properties/la-rioja-307/1.jpeg", "/images/properties/la-rioja-307/2.jpeg",
-                         "/images/properties/la-rioja-307/3.jpeg", "/images/properties/la-rioja-307/5.jpeg",
-                         "/images/properties/la-rioja-307/6.jpeg"],
-                LocationId = locations[5].Id, PublisherId = publisher.Id
-            },
-            new PropertyListing
-            {
-                Titulo = "Casa 3 dorm con pileta - Gral. Pico",
-                Descripcion = "Planta baja: living-comedor con cocina integrada, toilette, lavadero, jardín con pileta. Planta alta: 3 dormitorios con balcones y baño. Gran iluminación natural. Superficie construida 114m², terreno 187m².",
-                Precio = 98000, Moneda = "USD",
-                TipoPropiedad = TipoPropiedad.Casa, Operacion = TipoOperacion.Venta,
-                Superficie = 114, Ambientes = 5, Dormitorios = 3, Banos = 2,
-                Fotos = ["/images/properties/pico-464/1.jpg", "/images/properties/pico-464/2.jpg",
-                         "/images/properties/pico-464/5.jpg", "/images/properties/pico-464/10.jpg",
-                         "/images/properties/pico-464/18.jpg"],
-                LocationId = locations[6].Id, PublisherId = publisher.Id
-            },
-            new PropertyListing
-            {
-                Titulo = "Casa premium con pileta y parque - Toay",
-                Descripcion = "Amplio estar-comedor con cocina integrada y salida a galería. 3 dormitorios (principal con vestidor), escritorio, 2 baños, lavadero. Galería semicubierta, parque 973m² con pileta y solárium. Riego automático, persianas automatizadas, alarma. Superficie construida 239m².",
-                Precio = 195000, Moneda = "USD",
-                TipoPropiedad = TipoPropiedad.Casa, Operacion = TipoOperacion.Venta,
-                Superficie = 239, Ambientes = 7, Dormitorios = 3, Banos = 2,
-                Fotos = ["/images/properties/torcaza-725/1.png", "/images/properties/torcaza-725/2.jpeg",
-                         "/images/properties/torcaza-725/3.jpeg", "/images/properties/torcaza-725/4.jpeg",
-                         "/images/properties/torcaza-725/5.jpeg", "/images/properties/torcaza-725/6.jpeg",
-                         "/images/properties/torcaza-725/7.jpeg"],
-                LocationId = locations[7].Id, PublisherId = publisher.Id
+                listing.Images.Add(new PropertyImage
+                {
+                    Url = $"/images/properties/{data.Slug}/img{i + 1}.jpg",
+                    Orden = i,
+                    EsPrincipal = i == 0
+                });
             }
-        );
-        await ctx.SaveChangesAsync();
+
+            context.PropertyListings.Add(listing);
+        }
+
+        await context.SaveChangesAsync();
     }
 }
