@@ -32,16 +32,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
             v => v.Aggregate(0, (a, s) => HashCode.Combine(a, s.GetHashCode())),
             v => v.ToList());
 
-        // List<string> Fotos se guarda como JSON en una columna nvarchar
-        builder.Entity<PropertyListing>()
-            .Property(p => p.Fotos)
-            .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => string.IsNullOrWhiteSpace(v) ? new List<string>() : (JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>())
-            )
-            .Metadata.SetValueComparer(stringListComparer);
-
-        // List<string> Amenities también se guarda como JSON en una columna nvarchar
+        // List<string> Amenities se guarda como JSON en una columna nvarchar
         builder.Entity<PropertyListing>()
             .Property(p => p.Amenities)
             .HasConversion(

@@ -692,8 +692,7 @@
                 Antiguedad = model.Antiguedad > 0 ? model.Antiguedad : null,
                 Cochera = model.Cochera,
                 Amenities = model.Amenities,
-                Fotos = model.Fotos,
-                Estado = EstadoPropiedad.Activa
+                Estado = EstadoPublicacion.Publicada
             };
 
             await ListingRepo.AddAsync(listing);

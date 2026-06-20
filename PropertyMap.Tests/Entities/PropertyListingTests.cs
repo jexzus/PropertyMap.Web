@@ -6,18 +6,18 @@ namespace PropertyMap.Tests.Entities;
 public class PropertyListingTests
 {
     [Fact]
-    public void NewListing_HasDefaultState_Activa()
+    public void NewListing_HasDefaultState_Borrador()
     {
         var listing = new PropertyListing();
-        Assert.Equal(EstadoPropiedad.Activa, listing.Estado);
+        Assert.Equal(EstadoPublicacion.Borrador, listing.Estado);
     }
 
     [Fact]
-    public void NewListing_HasEmptyFotosList()
+    public void NewListing_HasEmptyImagesList()
     {
         var listing = new PropertyListing();
-        Assert.NotNull(listing.Fotos);
-        Assert.Empty(listing.Fotos);
+        Assert.NotNull(listing.Images);
+        Assert.Empty(listing.Images);
     }
 
     [Fact]

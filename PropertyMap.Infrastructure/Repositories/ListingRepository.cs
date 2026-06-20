@@ -11,7 +11,7 @@ public class ListingRepository(AppDbContext ctx) : IListingRepository
 {
     public async Task<IEnumerable<PropertyListing>> GetActiveListingsAsync() =>
         await ctx.PropertyListings
-            .Where(l => l.Estado == EstadoPropiedad.Activa)
+            .Where(l => l.Estado == EstadoPublicacion.Publicada)
             .Include(l => l.Location)
             .Include(l => l.Publisher)
             .ToListAsync();
@@ -25,7 +25,7 @@ public class ListingRepository(AppDbContext ctx) : IListingRepository
 
     public async Task<IEnumerable<ListingMapDto>> GetActiveListingsForMapAsync() =>
         await ctx.PropertyListings
-            .Where(l => l.Estado == EstadoPropiedad.Activa)
+            .Where(l => l.Estado == EstadoPublicacion.Publicada)
             .Include(l => l.Location)
             .Select(l => new ListingMapDto(
                 l.Id,
@@ -36,7 +36,7 @@ public class ListingRepository(AppDbContext ctx) : IListingRepository
                 l.Moneda,
                 l.TipoPropiedad.ToString(),
                 l.Operacion.ToString(),
-                l.Fotos.Count > 0 ? l.Fotos[0] : null
+                l.Images.Where(i => i.EsPrincipal).Select(i => i.Url).FirstOrDefault()
             ))
             .ToListAsync();
 

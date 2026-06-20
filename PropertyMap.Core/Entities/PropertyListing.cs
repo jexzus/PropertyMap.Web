@@ -23,7 +23,13 @@ public class PropertyListing
     public int? Antiguedad { get; set; }
     public bool Cochera { get; set; }
     public List<string> Amenities { get; set; } = [];
-    public List<string> Fotos { get; set; } = [];
-    public EstadoPropiedad Estado { get; set; } = EstadoPropiedad.Activa;
+    public EstadoPublicacion Estado { get; set; } = EstadoPublicacion.Borrador;
     public DateTime FechaPublicacion { get; set; } = DateTime.UtcNow;
+    public DateTime FechaActualizacion { get; set; } = DateTime.UtcNow;
+    public ICollection<PropertyImage> Images { get; set; } = [];
+    public ICollection<PropertyView> Views { get; set; } = [];
+    public ICollection<PropertyFavorite> Favorites { get; set; } = [];
+    public ICollection<PropertyRating> Ratings { get; set; } = [];
+    public ICollection<PropertyQuestion> Questions { get; set; } = [];
+    public ICollection<Report> Reports { get; set; } = [];
 }

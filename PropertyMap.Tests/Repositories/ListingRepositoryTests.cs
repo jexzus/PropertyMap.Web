@@ -46,9 +46,9 @@ public class ListingRepositoryTests
         await ctx.SaveChangesAsync();
 
         ctx.PropertyListings.AddRange(
-            new PropertyListing { Titulo = "Activa", Precio = 1, Moneda = "USD", TipoPropiedad = TipoPropiedad.Casa, Operacion = TipoOperacion.Venta, LocationId = location.Id, PublisherId = publisher.Id, Estado = EstadoPropiedad.Activa },
-            new PropertyListing { Titulo = "Pausada", Precio = 1, Moneda = "USD", TipoPropiedad = TipoPropiedad.Casa, Operacion = TipoOperacion.Venta, LocationId = location.Id, PublisherId = publisher.Id, Estado = EstadoPropiedad.Pausada },
-            new PropertyListing { Titulo = "Vendida", Precio = 1, Moneda = "USD", TipoPropiedad = TipoPropiedad.Casa, Operacion = TipoOperacion.Venta, LocationId = location.Id, PublisherId = publisher.Id, Estado = EstadoPropiedad.Vendida }
+            new PropertyListing { Titulo = "Activa", Precio = 1, Moneda = "USD", TipoPropiedad = TipoPropiedad.Casa, Operacion = TipoOperacion.Venta, LocationId = location.Id, PublisherId = publisher.Id, Estado = EstadoPublicacion.Publicada },
+            new PropertyListing { Titulo = "Pausada", Precio = 1, Moneda = "USD", TipoPropiedad = TipoPropiedad.Casa, Operacion = TipoOperacion.Venta, LocationId = location.Id, PublisherId = publisher.Id, Estado = EstadoPublicacion.Pausada },
+            new PropertyListing { Titulo = "Vendida", Precio = 1, Moneda = "USD", TipoPropiedad = TipoPropiedad.Casa, Operacion = TipoOperacion.Venta, LocationId = location.Id, PublisherId = publisher.Id, Estado = EstadoPublicacion.Vendida }
         );
         await ctx.SaveChangesAsync();
 
@@ -99,7 +99,7 @@ public class ListingRepositoryTests
             Moneda = "USD",
             TipoPropiedad = TipoPropiedad.Departamento,
             Operacion = TipoOperacion.Venta,
-            Estado = EstadoPropiedad.Activa,
+            Estado = EstadoPublicacion.Publicada,
             LocationId = location.Id,
             PublisherId = publisher.Id
         });

@@ -12,4 +12,6 @@ public class Publisher
     public string? Telefono { get; set; }
     public string UserId { get; set; } = ""; // FK a AspNetUsers.Id
     public ICollection<PropertyListing> Listings { get; set; } = [];
+    public ApplicationUser? User { get; set; }
+    public ICollection<AgentRating> Ratings { get; set; } = [];
 }
