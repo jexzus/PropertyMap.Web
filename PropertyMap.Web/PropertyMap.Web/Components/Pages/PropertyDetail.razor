@@ -2,6 +2,7 @@
 @using PropertyMap.Core.Entities
 @using PropertyMap.Core.Enums
 @using PropertyMap.Core.Interfaces
+@using System.Linq
 @inject IListingRepository ListingRepo
 @inject NavigationManager Nav
 @rendermode InteractiveServer
@@ -38,11 +39,11 @@ else
 
             @* ── Galería ── *@
             <div class="detail-gallery">
-                @if (listing.Fotos.Count > 0)
+                @if (listing.Images.Any())
                 {
                     <div class="gallery-main">
-                        <img src="@listing.Fotos[galleryIdx]" alt="@listing.Titulo" class="gallery-main-img" />
-                        @if (listing.Fotos.Count > 1)
+                        <img src="@(listing.Images.OrderBy(img => img.Orden).ElementAtOrDefault(galleryIdx)?.Url ?? "")" alt="@listing.Titulo" class="gallery-main-img" />
+                        @if (listing.Images.Count > 1)
                         {
                             <button class="gallery-btn gallery-btn--prev" @onclick="PrevPhoto" aria-label="Anterior">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
@@ -50,20 +51,20 @@ else
                             <button class="gallery-btn gallery-btn--next" @onclick="NextPhoto" aria-label="Siguiente">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
                             </button>
-                            <span class="gallery-counter">@(galleryIdx + 1) / @listing.Fotos.Count</span>
+                            <span class="gallery-counter">@(galleryIdx + 1) / @listing.Images.Count</span>
                         }
                     </div>
 
-                    @if (listing.Fotos.Count > 1)
+                    @if (listing.Images.Count > 1)
                     {
                         <div class="gallery-thumbs">
-                            @for (int i = 0; i < listing.Fotos.Count; i++)
+                            @foreach (var image in listing.Images.OrderBy(img => img.Orden).Select((img, idx) => (img, idx)))
                             {
-                                var idx = i;
-                                <img src="@listing.Fotos[i]"
+                                var idx = image.idx;
+                                <img src="@image.img.Url"
                                      class="gallery-thumb @(galleryIdx == idx ? "active" : "")"
                                      @onclick="() => galleryIdx = idx"
-                                     alt="Foto @(i+1)"
+                                     alt="Foto @(idx+1)"
                                      loading="lazy" />
                             }
                         </div>
@@ -227,8 +228,8 @@ else
         loading = false;
     }
 
-    private void PrevPhoto() => galleryIdx = galleryIdx > 0 ? galleryIdx - 1 : (listing!.Fotos.Count - 1);
-    private void NextPhoto() => galleryIdx = galleryIdx < listing!.Fotos.Count - 1 ? galleryIdx + 1 : 0;
+    private void PrevPhoto() => galleryIdx = galleryIdx > 0 ? galleryIdx - 1 : (listing!.Images.Count - 1);
+    private void NextPhoto() => galleryIdx = galleryIdx < listing!.Images.Count - 1 ? galleryIdx + 1 : 0;
 
     private string OperacionLabel => listing?.Operacion switch
     {

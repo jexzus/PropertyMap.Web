@@ -1,5 +1,6 @@
 @using PropertyMap.Core.Entities
 @using PropertyMap.Core.Enums
+@using System.Linq
 @inject IJSRuntime JS
 
 <div class="property-card @(IsSelected ? "selected" : "") @(IsHighlighted ? "highlighted" : "")"
@@ -13,11 +14,11 @@
     @* ── Carousel ── *@
     <div class="card-carousel" @onclick:stopPropagation="false">
         <div class="carousel-track" style="transform: translateX(-@(currentPhoto * 100)%)">
-            @if (Listing.Fotos.Count > 0)
+            @if (Listing.Images.Any())
             {
-                @foreach (var foto in Listing.Fotos)
+                @foreach (var image in Listing.Images.OrderBy(img => img.Orden))
                 {
-                    <img class="carousel-photo" src="@foto" alt="@Listing.Titulo" loading="lazy" />
+                    <img class="carousel-photo" src="@image.Url" alt="@Listing.Titulo" loading="lazy" />
                 }
             }
             else
@@ -30,7 +31,7 @@
             }
         </div>
 
-        @if (Listing.Fotos.Count > 1)
+        @if (Listing.Images.Count > 1)
         {
             <button class="carousel-btn carousel-btn--prev" @onclick="PrevPhoto" @onclick:stopPropagation="true" aria-label="Foto anterior">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
@@ -39,7 +40,7 @@
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
             <div class="carousel-dots">
-                @for (int i = 0; i < Math.Min(Listing.Fotos.Count, 5); i++)
+                @for (int i = 0; i < Math.Min(Listing.Images.Count, 5); i++)
                 {
                     var idx = i;
                     <span class="carousel-dot @(currentPhoto == idx ? "active" : "")" @onclick="() => GoToPhoto(idx)" @onclick:stopPropagation="true"></span>
@@ -126,8 +127,8 @@
         return $"{sym} {Listing.Precio:N0}";
     }
 
-    private void PrevPhoto() => currentPhoto = currentPhoto > 0 ? currentPhoto - 1 : Listing.Fotos.Count - 1;
-    private void NextPhoto() => currentPhoto = currentPhoto < Listing.Fotos.Count - 1 ? currentPhoto + 1 : 0;
+    private void PrevPhoto() => currentPhoto = currentPhoto > 0 ? currentPhoto - 1 : Listing.Images.Count - 1;
+    private void NextPhoto() => currentPhoto = currentPhoto < Listing.Images.Count - 1 ? currentPhoto + 1 : 0;
     private void GoToPhoto(int idx) => currentPhoto = idx;
 
     private async Task HandleClick()

@@ -4,6 +4,7 @@
 @using PropertyMap.Core.Enums
 @using PropertyMap.Core.Interfaces
 @using PropertyMap.Core.DTOs
+@using System.Linq
 @inject IListingRepository ListingRepo
 @inject IJSRuntime JS
 @rendermode InteractiveServer
@@ -145,7 +146,7 @@
                 l.Id, l.Location.Latitud, l.Location.Longitud,
                 l.Titulo, l.Precio, l.Moneda,
                 l.TipoPropiedad.ToString(), l.Operacion.ToString(),
-                l.Fotos.FirstOrDefault()
+                l.Images.OrderBy(img => img.Orden).FirstOrDefault()?.Url ?? ""
             )).ToList();
     }
 
