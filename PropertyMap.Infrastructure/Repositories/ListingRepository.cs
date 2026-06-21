@@ -46,6 +46,45 @@ public class ListingRepository(AppDbContext ctx) : IListingRepository
             .Include(l => l.Publisher)
             .FirstOrDefaultAsync(l => l.Id == id);
 
+    public async Task<ListingDetailDto?> GetByIdAsDetailAsync(int id)
+    {
+        var listing = await ctx.PropertyListings
+            .Include(l => l.Location)
+            .Include(l => l.Publisher)
+            .Include(l => l.Images.OrderBy(i => i.Orden))
+            .FirstOrDefaultAsync(l => l.Id == id && l.Estado == EstadoPublicacion.Publicada);
+
+        if (listing == null) return null;
+
+        return new ListingDetailDto(
+            Id: listing.Id,
+            Titulo: listing.Titulo,
+            Descripcion: listing.Descripcion,
+            Precio: listing.Precio,
+            Moneda: listing.Moneda,
+            TipoPropiedad: listing.TipoPropiedad.ToString(),
+            Operacion: listing.Operacion.ToString(),
+            DireccionTexto: listing.Location.DireccionTexto,
+            Ciudad: listing.Location.Ciudad,
+            Provincia: listing.Location.Provincia,
+            Lat: listing.Location.Latitud,
+            Lng: listing.Location.Longitud,
+            Superficie: listing.Superficie,
+            SuperficieCubierta: listing.SuperficieCubierta,
+            Ambientes: listing.Ambientes,
+            Dormitorios: listing.Dormitorios,
+            Banos: listing.Banos,
+            Antiguedad: listing.Antiguedad,
+            Cochera: listing.Cochera,
+            Amenities: listing.Amenities,
+            FotoUrls: listing.Images.Select(i => i.Url).ToList(),
+            PublisherNombre: listing.Publisher.Nombre,
+            PublisherTelefono: listing.Publisher.Telefono,
+            PublisherLogoUrl: listing.Publisher.LogoUrl,
+            FechaPublicacion: listing.FechaPublicacion
+        );
+    }
+
     public async Task<PropertyListing> AddAsync(PropertyListing listing)
     {
         ctx.PropertyListings.Add(listing);
