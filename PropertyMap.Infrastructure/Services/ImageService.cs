@@ -53,4 +53,29 @@ public class ImageService : IImageService
         if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
         return Task.CompletedTask;
     }
+
+    public async Task<string> SaveAvatarAsync(string userId, IFormFile file)
+    {
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!AllowedExtensions.Contains(ext))
+            throw new ArgumentException($"Extensión no permitida: {ext}");
+        if (file.Length > MaxFileSizeBytes)
+            throw new ArgumentException("El archivo supera el límite de 10 MB.");
+
+        var dir = Path.Combine(_uploadsRoot, "avatars", userId);
+
+        if (Directory.Exists(dir))
+            foreach (var existing in Directory.GetFiles(dir))
+                File.Delete(existing);
+
+        Directory.CreateDirectory(dir);
+
+        var fileName = $"avatar{ext}";
+        var fullPath = Path.Combine(dir, fileName);
+
+        await using var stream = File.Create(fullPath);
+        await file.CopyToAsync(stream);
+
+        return $"/uploads/avatars/{userId}/{fileName}";
+    }
 }
