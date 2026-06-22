@@ -1,13 +1,10 @@
 @page "/property/{Id:int}"
-@using PropertyMap.Core.Entities
-@using PropertyMap.Core.Enums
-@using PropertyMap.Core.Interfaces
-@using System.Linq
-@inject IListingRepository ListingRepo
+@using PropertyMap.Core.DTOs
+@inject IListingApiService ListingApi
 @inject NavigationManager Nav
 @rendermode InteractiveServer
 
-<PageTitle>@(listing?.Titulo ?? "Propiedad") — PropertyMap</PageTitle>
+<PageTitle>@(detail?.Titulo ?? "Propiedad") — PropertyMap</PageTitle>
 
 @if (loading)
 {
@@ -15,7 +12,7 @@
         <div class="detail-spinner"></div>
     </div>
 }
-else if (listing is null)
+else if (detail is null)
 {
     <div class="detail-not-found">
         <h2>Propiedad no encontrada</h2>
@@ -39,11 +36,11 @@ else
 
             @* ── Galería ── *@
             <div class="detail-gallery">
-                @if (listing.Images.Any())
+                @if (detail.FotoUrls.Any())
                 {
                     <div class="gallery-main">
-                        <img src="@(listing.Images.OrderBy(img => img.Orden).ElementAtOrDefault(galleryIdx)?.Url ?? "")" alt="@listing.Titulo" class="gallery-main-img" />
-                        @if (listing.Images.Count > 1)
+                        <img src="@detail.FotoUrls[galleryIdx]" alt="@detail.Titulo" class="gallery-main-img" />
+                        @if (detail.FotoUrls.Count > 1)
                         {
                             <button class="gallery-btn gallery-btn--prev" @onclick="PrevPhoto" aria-label="Anterior">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
@@ -51,20 +48,20 @@ else
                             <button class="gallery-btn gallery-btn--next" @onclick="NextPhoto" aria-label="Siguiente">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
                             </button>
-                            <span class="gallery-counter">@(galleryIdx + 1) / @listing.Images.Count</span>
+                            <span class="gallery-counter">@(galleryIdx + 1) / @detail.FotoUrls.Count</span>
                         }
                     </div>
 
-                    @if (listing.Images.Count > 1)
+                    @if (detail.FotoUrls.Count > 1)
                     {
                         <div class="gallery-thumbs">
-                            @foreach (var image in listing.Images.OrderBy(img => img.Orden).Select((img, idx) => (img, idx)))
+                            @foreach (var (url, idx) in detail.FotoUrls.Select((u, i) => (u, i)))
                             {
-                                var idx = image.idx;
-                                <img src="@image.img.Url"
-                                     class="gallery-thumb @(galleryIdx == idx ? "active" : "")"
-                                     @onclick="() => galleryIdx = idx"
-                                     alt="Foto @(idx+1)"
+                                var capturedIdx = idx;
+                                <img src="@url"
+                                     class="gallery-thumb @(galleryIdx == capturedIdx ? "active" : "")"
+                                     @onclick="() => galleryIdx = capturedIdx"
+                                     alt="Foto @(capturedIdx+1)"
                                      loading="lazy" />
                             }
                         </div>
@@ -76,17 +73,14 @@ else
             <div class="detail-info">
                 <div class="detail-header">
                     <div>
-                        <span class="detail-badge badge-@listing.Operacion.ToString().ToLower()">@OperacionLabel</span>
-                        <h1 class="detail-title">@listing.Titulo</h1>
-                        @if (listing.Location is not null)
-                        {
-                            <p class="detail-address">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-                                </svg>
-                                @listing.Location.DireccionTexto, @listing.Location.Ciudad, @listing.Location.Provincia
-                            </p>
-                        }
+                        <span class="detail-badge badge-@detail.Operacion.ToLower()">@OperacionLabel</span>
+                        <h1 class="detail-title">@detail.Titulo</h1>
+                        <p class="detail-address">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                            </svg>
+                            @detail.DireccionTexto, @detail.Ciudad, @detail.Provincia
+                        </p>
                     </div>
                     <div class="detail-price">@FormatPrice()</div>
                 </div>
@@ -95,55 +89,55 @@ else
                 @if (HasStats)
                 {
                     <div class="detail-stats">
-                        @if (listing.Superficie.HasValue)
+                        @if (detail.Superficie.HasValue)
                         {
                             <div class="detail-stat">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="1"/></svg>
-                                <span class="stat-value">@listing.Superficie m²</span>
+                                <span class="stat-value">@detail.Superficie m²</span>
                                 <span class="stat-label">Superficie</span>
                             </div>
                         }
-                        @if (listing.Ambientes.HasValue)
+                        @if (detail.Ambientes.HasValue)
                         {
                             <div class="detail-stat">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h18"/></svg>
-                                <span class="stat-value">@listing.Ambientes</span>
+                                <span class="stat-value">@detail.Ambientes</span>
                                 <span class="stat-label">Ambientes</span>
                             </div>
                         }
-                        @if (listing.Dormitorios.HasValue)
+                        @if (detail.Dormitorios.HasValue)
                         {
                             <div class="detail-stat">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8"/><path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/></svg>
-                                <span class="stat-value">@listing.Dormitorios</span>
+                                <span class="stat-value">@detail.Dormitorios</span>
                                 <span class="stat-label">Dormitorios</span>
                             </div>
                         }
-                        @if (listing.Banos.HasValue)
+                        @if (detail.Banos.HasValue)
                         {
                             <div class="detail-stat">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 6 6.5 3.5a1.5 1.5 0 0 0-1-.5C4.683 3 4 3.683 4 4.5V17a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/><line x1="10" y1="5" x2="8" y2="7"/></svg>
-                                <span class="stat-value">@listing.Banos</span>
+                                <span class="stat-value">@detail.Banos</span>
                                 <span class="stat-label">Baños</span>
                             </div>
                         }
-                        @if (listing.SuperficieCubierta.HasValue)
+                        @if (detail.SuperficieCubierta.HasValue)
                         {
                             <div class="detail-stat">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h18M9 3v18"/></svg>
-                                <span class="stat-value">@listing.SuperficieCubierta m²</span>
+                                <span class="stat-value">@detail.SuperficieCubierta m²</span>
                                 <span class="stat-label">Cubierta</span>
                             </div>
                         }
-                        @if (listing.Antiguedad.HasValue)
+                        @if (detail.Antiguedad.HasValue)
                         {
                             <div class="detail-stat">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                                <span class="stat-value">@(listing.Antiguedad == 0 ? "A estrenar" : $"{listing.Antiguedad} años")</span>
+                                <span class="stat-value">@(detail.Antiguedad == 0 ? "A estrenar" : $"{detail.Antiguedad} años")</span>
                                 <span class="stat-label">Antigüedad</span>
                             </div>
                         }
-                        @if (listing.Cochera)
+                        @if (detail.Cochera)
                         {
                             <div class="detail-stat">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 17v-4l1.6-4.2A2 2 0 0 1 8.5 7.5h7a2 2 0 0 1 1.9 1.3L19 13v4"/><path d="M3 13h18"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/></svg>
@@ -155,21 +149,21 @@ else
                 }
 
                 @* Descripción ── *@
-                @if (!string.IsNullOrWhiteSpace(listing.Descripcion))
+                @if (!string.IsNullOrWhiteSpace(detail.Descripcion))
                 {
                     <div class="detail-section">
                         <h2 class="detail-section-title">Descripción</h2>
-                        <p class="detail-description">@listing.Descripcion</p>
+                        <p class="detail-description">@detail.Descripcion</p>
                     </div>
                 }
 
                 @* Comodidades ── *@
-                @if (listing.Amenities.Count > 0)
+                @if (detail.Amenities.Count > 0)
                 {
                     <div class="detail-section">
                         <h2 class="detail-section-title">Comodidades</h2>
                         <div class="amenities-grid">
-                            @foreach (var a in listing.Amenities)
+                            @foreach (var a in detail.Amenities)
                             {
                                 <div class="amenity-chip">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
@@ -181,30 +175,27 @@ else
                 }
 
                 @* Ubicación ── *@
-                @if (listing.Location is not null)
-                {
-                    <div class="detail-section">
-                        <h2 class="detail-section-title">Ubicación</h2>
-                        <div class="detail-map-wrap">
-                            <LocationMap Lat="listing.Location.Latitud" Lng="listing.Location.Longitud" Height="320px" />
-                        </div>
+                <div class="detail-section">
+                    <h2 class="detail-section-title">Ubicación</h2>
+                    <div class="detail-map-wrap">
+                        <LocationMap Lat="detail.Lat" Lng="detail.Lng" Height="320px" />
                     </div>
-                }
+                </div>
 
                 @* Publicador ── *@
-                @if (listing.Publisher is not null)
+                @if (!string.IsNullOrEmpty(detail.PublisherNombre))
                 {
                     <div class="detail-section detail-publisher">
                         <h2 class="detail-section-title">Publicado por</h2>
                         <div class="publisher-card">
                             <div class="publisher-avatar">
-                                @listing.Publisher.Nombre[0]
+                                @detail.PublisherNombre[0]
                             </div>
                             <div>
-                                <div class="publisher-name">@listing.Publisher.Nombre</div>
-                                @if (!string.IsNullOrEmpty(listing.Publisher.Telefono))
+                                <div class="publisher-name">@detail.PublisherNombre</div>
+                                @if (!string.IsNullOrEmpty(detail.PublisherTelefono))
                                 {
-                                    <a href="tel:@listing.Publisher.Telefono" class="publisher-phone">@listing.Publisher.Telefono</a>
+                                    <a href="tel:@detail.PublisherTelefono" class="publisher-phone">@detail.PublisherTelefono</a>
                                 }
                             </div>
                         </div>
@@ -218,36 +209,36 @@ else
 @code {
     [Parameter] public int Id { get; set; }
 
-    private PropertyListing? listing;
+    private ListingDetailDto? detail;
     private bool loading = true;
     private int galleryIdx;
 
     protected override async Task OnInitializedAsync()
     {
-        listing = await ListingRepo.GetByIdAsync(Id);
+        detail = await ListingApi.GetByIdAsync(Id);
         loading = false;
     }
 
-    private void PrevPhoto() => galleryIdx = galleryIdx > 0 ? galleryIdx - 1 : (listing!.Images.Count - 1);
-    private void NextPhoto() => galleryIdx = galleryIdx < listing!.Images.Count - 1 ? galleryIdx + 1 : 0;
+    private void PrevPhoto() => galleryIdx = galleryIdx > 0 ? galleryIdx - 1 : (detail!.FotoUrls.Count - 1);
+    private void NextPhoto() => galleryIdx = galleryIdx < detail!.FotoUrls.Count - 1 ? galleryIdx + 1 : 0;
 
-    private string OperacionLabel => listing?.Operacion switch
+    private string OperacionLabel => detail?.Operacion switch
     {
-        TipoOperacion.Venta              => "Venta",
-        TipoOperacion.Alquiler           => "Alquiler",
-        TipoOperacion.AlquilerTemporario => "Alquiler Temporario",
-        _                                => ""
+        "Venta"              => "Venta",
+        "Alquiler"           => "Alquiler",
+        "AlquilerTemporario" => "Alquiler Temporario",
+        _                    => detail?.Operacion ?? ""
     };
 
-    private bool HasStats => listing is not null &&
-        (listing.Superficie.HasValue || listing.SuperficieCubierta.HasValue ||
-         listing.Ambientes.HasValue || listing.Dormitorios.HasValue ||
-         listing.Banos.HasValue || listing.Antiguedad.HasValue || listing.Cochera);
+    private bool HasStats => detail is not null &&
+        (detail.Superficie.HasValue || detail.SuperficieCubierta.HasValue ||
+         detail.Ambientes.HasValue || detail.Dormitorios.HasValue ||
+         detail.Banos.HasValue || detail.Antiguedad.HasValue || detail.Cochera);
 
     private string FormatPrice()
     {
-        if (listing is null) return "";
-        var sym = listing.Moneda == "USD" ? "U$S" : "$";
-        return $"{sym} {listing.Precio:N0}";
+        if (detail is null) return "";
+        var sym = detail.Moneda == "USD" ? "U$S" : "$";
+        return $"{sym} {detail.Precio:N0}";
     }
 }

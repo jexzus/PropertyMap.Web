@@ -6,6 +6,7 @@ using PropertyMap.Core.Interfaces;
 using PropertyMap.Infrastructure.Data;
 using PropertyMap.Infrastructure.Repositories;
 using PropertyMap.Web.Components;
+using PropertyMap.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,6 +35,12 @@ builder.Services.AddDefaultIdentity<IdentityUser>(options =>
 builder.Services.AddScoped<IListingRepository, ListingRepository>();
 builder.Services.AddScoped<IPublisherRepository, PublisherRepository>();
 builder.Services.AddScoped<ILocationRepository, LocationRepository>();
+
+builder.Services.AddHttpClient<IListingApiService, ListingApiService>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["ApiSettings:BaseUrl"]
+                                 ?? "https://localhost:7002/");
+});
 
 builder.Services.AddCascadingAuthenticationState();
 

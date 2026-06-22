@@ -2,10 +2,9 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using PropertyMap.Core.Entities
 @using PropertyMap.Core.Enums
-@using PropertyMap.Core.Interfaces
 @using PropertyMap.Core.DTOs
 @using System.Linq
-@inject IListingRepository ListingRepo
+@inject IListingApiService ListingApi
 @inject IJSRuntime JS
 @rendermode InteractiveServer
 
@@ -97,8 +96,8 @@
         try
         {
             isLoading = true;
-            allListings = (await ListingRepo.GetActiveListingsAsync()).ToList();
-            mapListings = (await ListingRepo.GetActiveListingsForMapAsync()).ToList();
+            allListings = (await ListingApi.GetActiveListingsAsync()).ToList();
+            mapListings = (await ListingApi.GetActiveListingsForMapAsync()).ToList();
             filteredListings = allListings;
         }
         catch (Exception ex) { loadError = ex.Message; }
