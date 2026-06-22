@@ -1,0 +1,148 @@
+@page "/publisher/dashboard"
+@rendermode InteractiveServer
+@inject IPropertyApiService PropertyApi
+@inject IAuthService AuthService
+@inject NavigationManager Nav
+
+<PageTitle>Mi panel — PropertyMap</PageTitle>
+
+<AuthorizeView>
+    <Authorized>
+        <div class="app-shell" style="display:flex;flex-direction:column">
+            <nav class="pm-navbar" role="navigation">
+                <a href="/" class="pm-navbar__logo">PropertyMap</a>
+                <span style="font-weight:600">Mi panel</span>
+                <div class="pm-navbar__actions">
+                    <a href="/publicar" class="btn-primary">+ Publicar</a>
+                    <button class="btn-ghost" @onclick="Logout">Salir</button>
+                </div>
+            </nav>
+
+            <div style="padding:var(--space-6,1.5rem);max-width:900px;margin:0 auto;width:100%">
+                <h1 style="font-size:1.5rem;font-weight:700;margin-bottom:var(--space-4)">
+                    Mis propiedades
+                </h1>
+
+                @if (loading)
+                {
+                    <p style="color:var(--color-text-muted)">Cargando...</p>
+                }
+                else if (listings.Count == 0)
+                {
+                    <div style="text-align:center;padding:var(--space-10) 0;color:var(--color-text-muted)">
+                        <p style="font-size:1.125rem">Todavía no publicaste ninguna propiedad.</p>
+                        <a href="/publicar" class="btn-primary" style="margin-top:var(--space-4);display:inline-block">
+                            Publicar mi primera propiedad
+                        </a>
+                    </div>
+                }
+                else
+                {
+                    <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+                        @foreach (var l in listings)
+                        {
+                            <div class="dashboard-listing-card">
+                                @if (l.FotoPrincipalUrl is not null)
+                                {
+                                    <img src="@l.FotoPrincipalUrl" alt="@l.Titulo" class="dashboard-listing-img" />
+                                }
+                                else
+                                {
+                                    <div class="dashboard-listing-img dashboard-listing-img--placeholder" aria-hidden="true">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                                        </svg>
+                                    </div>
+                                }
+                                <div class="dashboard-listing-body">
+                                    <a href="/property/@l.Id" class="dashboard-listing-title">@l.Titulo</a>
+                                    <div class="dashboard-listing-meta">
+                                        @l.Ciudad · @l.TipoPropiedad · @l.Operacion
+                                    </div>
+                                    <div class="dashboard-listing-price">
+                                        @l.Moneda @l.Precio.ToString("N0")
+                                    </div>
+                                </div>
+                                <span class="dashboard-listing-status @StatusClass(l.Estado)">
+                                    @StatusLabel(l.Estado)
+                                </span>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <div class="auth-page">
+            <div class="auth-card">
+                <a href="/" class="auth-logo">PropertyMap</a>
+                <p style="text-align:center">Necesitás iniciar sesión para ver tu panel.</p>
+                <a href="/Account/Login?returnUrl=/publisher/dashboard" class="btn-primary auth-btn" style="text-align:center">
+                    Iniciar sesión
+                </a>
+            </div>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<PropertyMap.Core.DTOs.Properties.MyListingDto> listings = [];
+    private bool loading = true;
+    private bool sessionRestored;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !sessionRestored)
+        {
+            sessionRestored = true;
+            await AuthService.TryRestoreSessionAsync();
+            await LoadListings();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadListings()
+    {
+        loading = true;
+        try
+        {
+            listings = await PropertyApi.GetMyListingsAsync();
+        }
+        catch
+        {
+            listings = [];
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task Logout()
+    {
+        await AuthService.LogoutAsync();
+        Nav.NavigateTo("/");
+    }
+
+    private static string StatusLabel(string estado) => estado switch
+    {
+        "Borrador" => "Borrador",
+        "PendienteAprobacion" => "En revisión",
+        "Publicada" => "Publicada",
+        "Pausada" => "Pausada",
+        "Vendida" => "Vendida",
+        "Alquilada" => "Alquilada",
+        "Eliminada" => "Eliminada",
+        _ => estado
+    };
+
+    private static string StatusClass(string estado) => estado switch
+    {
+        "Publicada" => "status--publicada",
+        "PendienteAprobacion" => "status--pendiente",
+        "Pausada" => "status--pausada",
+        "Borrador" => "status--borrador",
+        _ => "status--default"
+    };
+}

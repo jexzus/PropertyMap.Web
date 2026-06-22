@@ -1485,3 +1485,82 @@ html, body {
     color: var(--color-text-muted, oklch(55% 0.01 250));
     margin: 0;
 }
+
+/* ── Publisher Dashboard ─────────────────────────────────────────── */
+.dashboard-listing-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4, 1rem);
+    background: var(--color-surface, white);
+    border: 1px solid var(--color-border, oklch(90% 0.01 250));
+    border-radius: var(--radius-lg, 12px);
+    padding: var(--space-3, 0.75rem);
+    transition: box-shadow 0.15s;
+}
+
+.dashboard-listing-card:hover {
+    box-shadow: 0 2px 12px oklch(0% 0 0 / 0.08);
+}
+
+.dashboard-listing-img {
+    width: 80px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: var(--radius-md, 8px);
+    flex-shrink: 0;
+}
+
+.dashboard-listing-img--placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-surface-2, oklch(97% 0.005 250));
+    color: var(--color-text-muted, oklch(55% 0.01 250));
+}
+
+.dashboard-listing-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.dashboard-listing-title {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--color-text, oklch(20% 0.01 250));
+    text-decoration: none;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dashboard-listing-title:hover { text-decoration: underline; }
+
+.dashboard-listing-meta {
+    font-size: 0.8125rem;
+    color: var(--color-text-muted, oklch(55% 0.01 250));
+    margin-top: 2px;
+}
+
+.dashboard-listing-price {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-brand, oklch(55% 0.18 250));
+    margin-top: 4px;
+}
+
+.dashboard-listing-status {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 999px;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.status--publicada   { background: oklch(92% 0.1 140); color: oklch(35% 0.12 140); }
+.status--pendiente   { background: oklch(94% 0.1 80);  color: oklch(40% 0.12 80);  }
+.status--pausada     { background: oklch(92% 0.05 250); color: oklch(40% 0.08 250); }
+.status--borrador    { background: oklch(93% 0.02 250); color: oklch(50% 0.05 250); }
+.status--default     { background: oklch(93% 0.02 250); color: oklch(50% 0.05 250); }
