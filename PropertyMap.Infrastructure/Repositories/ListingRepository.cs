@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PropertyMap.Core.DTOs;
+using PropertyMap.Core.DTOs.Admin;
+using PropertyMap.Core.DTOs.Properties;
 using PropertyMap.Core.Entities;
 using PropertyMap.Core.Enums;
 using PropertyMap.Core.Interfaces;
@@ -84,6 +86,51 @@ public class ListingRepository(AppDbContext ctx) : IListingRepository
             FechaPublicacion: listing.FechaPublicacion
         );
     }
+
+    public async Task<IEnumerable<MyListingDto>> GetMyListingsAsync(int publisherId) =>
+        await ctx.PropertyListings
+            .Where(l => l.PublisherId == publisherId)
+            .Include(l => l.Location)
+            .Include(l => l.Images.Where(i => i.EsPrincipal))
+            .OrderByDescending(l => l.FechaActualizacion)
+            .Select(l => new MyListingDto(
+                l.Id,
+                l.Titulo,
+                l.Location.DireccionTexto,
+                l.Location.Ciudad,
+                l.Precio,
+                l.Moneda,
+                l.TipoPropiedad.ToString(),
+                l.Operacion.ToString(),
+                l.Estado.ToString(),
+                l.Images.Where(i => i.EsPrincipal).Select(i => i.Url).FirstOrDefault(),
+                l.FechaPublicacion,
+                l.FechaActualizacion
+            ))
+            .ToListAsync();
+
+    public async Task<IEnumerable<PendingListingDto>> GetPendingListingsAsync() =>
+        await ctx.PropertyListings
+            .Where(l => l.Estado == EstadoPublicacion.PendienteAprobacion)
+            .Include(l => l.Location)
+            .Include(l => l.Publisher)
+            .Include(l => l.Images.Where(i => i.EsPrincipal))
+            .OrderBy(l => l.FechaPublicacion)
+            .Select(l => new PendingListingDto(
+                l.Id,
+                l.Titulo,
+                l.Location.DireccionTexto,
+                l.Location.Ciudad,
+                l.Precio,
+                l.Moneda,
+                l.TipoPropiedad.ToString(),
+                l.Operacion.ToString(),
+                l.Images.Where(i => i.EsPrincipal).Select(i => i.Url).FirstOrDefault(),
+                l.Publisher.Nombre,
+                l.Publisher.Email,
+                l.FechaPublicacion
+            ))
+            .ToListAsync();
 
     public async Task<PropertyListing> AddAsync(PropertyListing listing)
     {
