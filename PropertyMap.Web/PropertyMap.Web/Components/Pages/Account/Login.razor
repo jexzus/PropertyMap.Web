@@ -1,0 +1,91 @@
+@page "/Account/Login"
+@rendermode InteractiveServer
+@inject IAuthService AuthService
+@inject NavigationManager Nav
+
+<PageTitle>Iniciar sesión — PropertyMap</PageTitle>
+
+<div class="auth-page">
+    <div class="auth-card">
+        <a href="/" class="auth-logo">PropertyMap</a>
+        <h1 class="auth-title">Iniciar sesión</h1>
+
+        @if (error is not null)
+        {
+            <div class="auth-error">@error</div>
+        }
+
+        <div class="field">
+            <label class="field-label" for="email">Email</label>
+            <input id="email" type="email" class="field-input"
+                   @bind="email" @bind:event="oninput"
+                   placeholder="tu@email.com" autocomplete="email" />
+        </div>
+
+        <div class="field">
+            <label class="field-label" for="password">Contraseña</label>
+            <input id="password" type="password" class="field-input"
+                   @bind="password" @bind:event="oninput"
+                   @onkeydown="OnKeyDown"
+                   placeholder="Tu contraseña" autocomplete="current-password" />
+        </div>
+
+        <button class="btn-primary auth-btn" @onclick="DoLogin" disabled="@loading">
+            @(loading ? "Ingresando..." : "Ingresar")
+        </button>
+
+        <p class="auth-footer">
+            ¿No tenés cuenta? <a href="/Account/Register">Registrate</a>
+        </p>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    private string email = "";
+    private string password = "";
+    private string? error;
+    private bool loading;
+    private bool sessionRestored;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !sessionRestored)
+        {
+            sessionRestored = true;
+            var restored = await AuthService.TryRestoreSessionAsync();
+            if (restored)
+            {
+                Nav.NavigateTo(ReturnUrl ?? "/");
+            }
+        }
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await DoLogin();
+    }
+
+    private async Task DoLogin()
+    {
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+        {
+            error = "Completá email y contraseña.";
+            return;
+        }
+        loading = true;
+        error = null;
+        var (success, err) = await AuthService.LoginAsync(email, password);
+        if (success)
+        {
+            Nav.NavigateTo(ReturnUrl ?? "/");
+        }
+        else
+        {
+            error = err;
+            loading = false;
+        }
+    }
+}

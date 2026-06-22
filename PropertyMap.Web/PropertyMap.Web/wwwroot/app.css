@@ -1417,3 +1417,71 @@ html, body {
 .search-suggestion:hover { background: var(--color-surface); }
 .search-suggestion-icon { color: var(--color-muted); flex-shrink: 0; }
 .search-suggestion-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Auth pages ─────────────────────────────────────────────────────── */
+.auth-page {
+    min-height: 100svh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-surface-2, oklch(97% 0.005 250));
+    padding: var(--space-4);
+}
+
+.auth-card {
+    background: var(--color-surface, white);
+    border: 1px solid var(--color-border, oklch(90% 0.01 250));
+    border-radius: var(--radius-lg, 12px);
+    padding: var(--space-8, 2rem);
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4, 1rem);
+}
+
+.auth-logo {
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: var(--color-brand, oklch(55% 0.18 250));
+    text-decoration: none;
+    text-align: center;
+}
+
+.auth-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-align: center;
+    margin: 0;
+}
+
+.auth-error {
+    background: oklch(95% 0.05 20);
+    color: oklch(40% 0.15 20);
+    border: 1px solid oklch(85% 0.1 20);
+    border-radius: var(--radius-md, 8px);
+    padding: var(--space-3, 0.75rem);
+    font-size: 0.875rem;
+}
+
+.auth-success {
+    background: oklch(95% 0.05 140);
+    color: oklch(35% 0.12 140);
+    border: 1px solid oklch(82% 0.1 140);
+    border-radius: var(--radius-md, 8px);
+    padding: var(--space-3, 0.75rem);
+    font-size: 0.875rem;
+}
+
+.auth-btn {
+    width: 100%;
+    justify-content: center;
+    padding-block: var(--space-3, 0.75rem);
+}
+
+.auth-footer {
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--color-text-muted, oklch(55% 0.01 250));
+    margin: 0;
+}
