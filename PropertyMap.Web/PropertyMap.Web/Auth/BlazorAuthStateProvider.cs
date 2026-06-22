@@ -23,9 +23,9 @@ public class BlazorAuthStateProvider : AuthenticationStateProvider
 
         var claims = new List<Claim>
         {
-            new(ClaimTypes.NameIdentifier, _tokenStore.UserId!),
-            new(ClaimTypes.Email, _tokenStore.Email!),
-            new(ClaimTypes.Name, _tokenStore.NombreCompleto!),
+            new(ClaimTypes.NameIdentifier, _tokenStore.UserId ?? ""),
+            new(ClaimTypes.Email, _tokenStore.Email ?? ""),
+            new(ClaimTypes.Name, _tokenStore.NombreCompleto ?? ""),
         };
         foreach (var role in _tokenStore.Roles)
             claims.Add(new(ClaimTypes.Role, role));
