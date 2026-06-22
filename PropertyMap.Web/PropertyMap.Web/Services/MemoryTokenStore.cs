@@ -23,7 +23,7 @@ public class MemoryTokenStore
         UserId = r.UserId;
         Email = r.Email;
         NombreCompleto = r.NombreCompleto;
-        Roles = r.Roles;
+        Roles = r.Roles ?? [];
     }
 
     public void Clear()

@@ -31,12 +31,11 @@ public class AuthService : IAuthService
         try
         {
             var resp = await _http.PostAsJsonAsync("api/auth/login", new LoginRequest(email, password));
-            if (resp.StatusCode == HttpStatusCode.Unauthorized || resp.StatusCode == HttpStatusCode.BadRequest)
+            if (!resp.IsSuccessStatusCode)
             {
                 var err = await resp.Content.ReadFromJsonAsync<ErrorDto>();
                 return (false, err?.Message ?? "Credenciales incorrectas.");
             }
-            resp.EnsureSuccessStatusCode();
             var auth = await resp.Content.ReadFromJsonAsync<AuthResponse>();
             if (auth is null) return (false, "Respuesta inesperada del servidor.");
 
