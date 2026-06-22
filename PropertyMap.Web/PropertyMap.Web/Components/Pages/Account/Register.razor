@@ -1,0 +1,104 @@
+@page "/Account/Register"
+@rendermode InteractiveServer
+@inject IAuthService AuthService
+@inject NavigationManager Nav
+
+<PageTitle>Crear cuenta — PropertyMap</PageTitle>
+
+<div class="auth-page">
+    <div class="auth-card">
+        <a href="/" class="auth-logo">PropertyMap</a>
+        <h1 class="auth-title">Crear cuenta</h1>
+
+        @if (error is not null)
+        {
+            <div class="auth-error">@error</div>
+        }
+
+        @if (success)
+        {
+            <div class="auth-success">
+                ✓ Cuenta creada. Revisá tu email para verificar tu cuenta y poder iniciar sesión.
+            </div>
+            <a href="/Account/Login" class="btn-primary auth-btn" style="text-align:center">
+                Ir al login
+            </a>
+        }
+        else
+        {
+            <div class="field-row">
+                <div class="field">
+                    <label class="field-label" for="nombre">Nombre</label>
+                    <input id="nombre" type="text" class="field-input"
+                           @bind="nombre" placeholder="Juan" autocomplete="given-name" />
+                </div>
+                <div class="field">
+                    <label class="field-label" for="apellido">Apellido</label>
+                    <input id="apellido" type="text" class="field-input"
+                           @bind="apellido" placeholder="Pérez" autocomplete="family-name" />
+                </div>
+            </div>
+
+            <div class="field">
+                <label class="field-label" for="email">Email</label>
+                <input id="email" type="email" class="field-input"
+                       @bind="email" placeholder="tu@email.com" autocomplete="email" />
+            </div>
+
+            <div class="field">
+                <label class="field-label" for="password">Contraseña</label>
+                <input id="password" type="password" class="field-input"
+                       @bind="password" placeholder="Mín. 8 caracteres, 1 mayúscula, 1 número, 1 símbolo"
+                       autocomplete="new-password" />
+            </div>
+
+            <div class="field">
+                <label class="field-label" for="confirm">Confirmar contraseña</label>
+                <input id="confirm" type="password" class="field-input"
+                       @bind="confirm" placeholder="Repetí la contraseña"
+                       autocomplete="new-password" />
+            </div>
+
+            <button class="btn-primary auth-btn" @onclick="DoRegister" disabled="@loading">
+                @(loading ? "Registrando..." : "Crear cuenta")
+            </button>
+
+            <p class="auth-footer">
+                ¿Ya tenés cuenta? <a href="/Account/Login">Iniciá sesión</a>
+            </p>
+        }
+    </div>
+</div>
+
+@code {
+    private string nombre = "";
+    private string apellido = "";
+    private string email = "";
+    private string password = "";
+    private string confirm = "";
+    private string? error;
+    private bool loading;
+    private bool success;
+
+    private async Task DoRegister()
+    {
+        if (string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(apellido)
+            || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+        {
+            error = "Completá todos los campos.";
+            return;
+        }
+        if (password != confirm)
+        {
+            error = "Las contraseñas no coinciden.";
+            return;
+        }
+
+        loading = true;
+        error = null;
+        var (ok, err) = await AuthService.RegisterAsync(nombre, apellido, email, password, confirm);
+        loading = false;
+        if (ok) success = true;
+        else error = err;
+    }
+}
