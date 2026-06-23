@@ -62,6 +62,8 @@ public class NoOpEmailService : IEmailService
     public Task SendEmailVerificationAsync(string toEmail, string toName, string token) => Task.CompletedTask;
     public Task SendPasswordResetAsync(string toEmail, string toName, string token, string resetUrl) => Task.CompletedTask;
     public Task SendWelcomeAsync(string toEmail, string toName) => Task.CompletedTask;
+    public Task SendNuevaConsultaAsync(string toEmail, string publisherNombre, string propertyTitulo, string userNombre, string mensaje) => Task.CompletedTask;
+    public Task SendNuevaRespuestaAsync(string toEmail, string userNombre, string propertyTitulo, string publisherNombre, string mensaje) => Task.CompletedTask;
 }
 
 public static class TestAuthHelper
@@ -88,6 +90,33 @@ public static class TestAuthHelper
         await userManager.AddToRoleAsync(user, "Publisher");
 
         // Login
+        var loginResp = await client.PostAsJsonAsync("/api/auth/login",
+            new PropertyMap.Core.DTOs.Auth.LoginRequest(email, "Test123!"));
+        var auth = await loginResp.Content.ReadFromJsonAsync<PropertyMap.Core.DTOs.Auth.AuthResponse>();
+
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", auth!.AccessToken);
+
+        return (client, user.Id);
+    }
+
+    public static async Task<(HttpClient client, string userId)> CreateAuthenticatedUserAsync(
+        TestWebApplicationFactory factory)
+    {
+        var client = factory.CreateClient();
+        var email = $"user_{Guid.NewGuid()}@test.com";
+
+        await client.PostAsJsonAsync("/api/auth/register",
+            new PropertyMap.Core.DTOs.Auth.RegisterRequest("Test", "User", email, "Test123!", "Test123!"));
+
+        using var scope = factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<PropertyMap.Core.Entities.ApplicationUser>>();
+        var user = await userManager.FindByEmailAsync(email);
+        user!.EmailConfirmed = true;
+        user.Estado = PropertyMap.Core.Enums.EstadoUsuario.Activo;
+        await userManager.UpdateAsync(user);
+
+        // No Publisher role — plain user
         var loginResp = await client.PostAsJsonAsync("/api/auth/login",
             new PropertyMap.Core.DTOs.Auth.LoginRequest(email, "Test123!"));
         var auth = await loginResp.Content.ReadFromJsonAsync<PropertyMap.Core.DTOs.Auth.AuthResponse>();

@@ -81,4 +81,46 @@ public class EmailService : IEmailService
             """;
         await SendAsync(toEmail, toName, "¡Bienvenido a PropertyMap!", html);
     }
+
+    public async Task SendNuevaConsultaAsync(
+        string toEmail, string publisherNombre,
+        string propertyTitulo, string userNombre, string mensaje)
+    {
+        var html = $"""
+            <!DOCTYPE html>
+            <html>
+            <body style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:24px">
+              <h2 style="color:#be123c">Nueva consulta</h2>
+              <p>Hola <strong>{publisherNombre}</strong>,</p>
+              <p><strong>{userNombre}</strong> te envió una consulta sobre <strong>{propertyTitulo}</strong>:</p>
+              <blockquote style="border-left:3px solid #be123c;padding-left:12px;color:#333;margin:16px 0">
+                {mensaje}
+              </blockquote>
+              <p>Respondé desde tu panel en PropertyMap.</p>
+            </body>
+            </html>
+            """;
+        await SendAsync(toEmail, publisherNombre, $"Nueva consulta sobre {propertyTitulo}", html);
+    }
+
+    public async Task SendNuevaRespuestaAsync(
+        string toEmail, string userNombre,
+        string propertyTitulo, string publisherNombre, string mensaje)
+    {
+        var html = $"""
+            <!DOCTYPE html>
+            <html>
+            <body style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:24px">
+              <h2 style="color:#be123c">Respuesta a tu consulta</h2>
+              <p>Hola <strong>{userNombre}</strong>,</p>
+              <p><strong>{publisherNombre}</strong> respondió tu consulta sobre <strong>{propertyTitulo}</strong>:</p>
+              <blockquote style="border-left:3px solid #be123c;padding-left:12px;color:#333;margin:16px 0">
+                {mensaje}
+              </blockquote>
+              <p>Ver la conversación completa en PropertyMap.</p>
+            </body>
+            </html>
+            """;
+        await SendAsync(toEmail, userNombre, $"Respuesta de {publisherNombre}", html);
+    }
 }
