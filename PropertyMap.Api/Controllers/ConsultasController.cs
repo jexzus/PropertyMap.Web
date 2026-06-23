@@ -16,17 +16,20 @@ namespace PropertyMap.Api.Controllers;
 public class ConsultasController : ControllerBase
 {
     private readonly IConsultaRepository _consultas;
+    private readonly IListingRepository _listings;
     private readonly IEmailService _email;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<ConsultasController> _logger;
 
     public ConsultasController(
         IConsultaRepository consultas,
+        IListingRepository listings,
         IEmailService email,
         UserManager<ApplicationUser> userManager,
         ILogger<ConsultasController> logger)
     {
         _consultas = consultas;
+        _listings = listings;
         _email = email;
         _userManager = userManager;
         _logger = logger;
@@ -37,6 +40,15 @@ public class ConsultasController : ControllerBase
     public async Task<IActionResult> CreateOrContinue([FromBody] CreateConsultaRequest request)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+        if (string.IsNullOrWhiteSpace(request.Mensaje))
+            return BadRequest("El mensaje no puede estar vacío.");
+
+        var listing = await _listings.GetByIdAsync(request.ListingId);
+        if (listing is null)
+            return NotFound("La propiedad no existe.");
+        if (listing.Publisher?.UserId == userId)
+            return BadRequest("No podés consultar tu propia propiedad.");
 
         var consulta = await _consultas.GetOrCreateAsync(request.ListingId, userId);
 
@@ -114,6 +126,9 @@ public class ConsultasController : ControllerBase
     public async Task<IActionResult> PublisherReply(int id, [FromBody] SendMensajeRequest request)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+        if (string.IsNullOrWhiteSpace(request.Mensaje))
+            return BadRequest("El mensaje no puede estar vacío.");
 
         if (!await _consultas.CanPublisherReplyAsync(id, userId))
             return Forbid();

@@ -182,4 +182,43 @@ public class ConsultasControllerTests : IClassFixture<TestWebApplicationFactory>
 
         Assert.Equal(HttpStatusCode.Forbidden, replyResp.StatusCode);
     }
+
+    [Fact]
+    public async Task GetMyConsultas_ReturnsThreadsOrderedByLatestMessage()
+    {
+        var (_, _, listingId) = await SetupPublishedListingAsync();
+        var (userClient, _) = await TestAuthHelper.CreateAuthenticatedUserAsync(_factory);
+
+        // Create a thread with two messages
+        await userClient.PostAsJsonAsync("/api/consultas",
+            new CreateConsultaRequest(listingId, "Primer mensaje"));
+        await userClient.PostAsJsonAsync("/api/consultas",
+            new CreateConsultaRequest(listingId, "Segundo mensaje"));
+
+        var resp = await userClient.GetAsync("/api/consultas");
+        Assert.Equal(System.Net.HttpStatusCode.OK, resp.StatusCode);
+        var list = await resp.Content.ReadFromJsonAsync<List<ConsultaSummaryDto>>();
+        Assert.NotNull(list);
+        Assert.True(list!.Count >= 1);
+        // Most recent message is the last preview
+        Assert.Equal("Segundo mensaje", list[0].UltimoMensaje);
+        Assert.False(list[0].UltimoEsDelPublisher);
+    }
+
+    [Fact]
+    public async Task GetPublisherConsultas_ReturnsReceivedThreads()
+    {
+        var (pubClient, _, listingId) = await SetupPublishedListingAsync();
+        var (userClient, _) = await TestAuthHelper.CreateAuthenticatedUserAsync(_factory);
+
+        await userClient.PostAsJsonAsync("/api/consultas",
+            new CreateConsultaRequest(listingId, "Consulta para el publisher"));
+
+        var resp = await pubClient.GetAsync("/api/consultas/publisher");
+        Assert.Equal(System.Net.HttpStatusCode.OK, resp.StatusCode);
+        var list = await resp.Content.ReadFromJsonAsync<List<ConsultaSummaryDto>>();
+        Assert.NotNull(list);
+        Assert.True(list!.Count >= 1);
+        Assert.Equal("Consulta para el publisher", list[0].UltimoMensaje);
+    }
 }
