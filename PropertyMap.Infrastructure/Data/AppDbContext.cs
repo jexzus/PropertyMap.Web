@@ -169,6 +169,12 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
             .HasIndex(c => new { c.PropertyListingId, c.UserId }).IsUnique();
 
         modelBuilder.Entity<Consulta>()
+            .HasOne(c => c.PropertyListing)
+            .WithMany()
+            .HasForeignKey(c => c.PropertyListingId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Consulta>()
             .HasOne(c => c.User)
             .WithMany()
             .HasForeignKey(c => c.UserId)
