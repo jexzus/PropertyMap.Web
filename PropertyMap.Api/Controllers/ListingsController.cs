@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using PropertyMap.Core.Interfaces;
 
@@ -8,10 +9,12 @@ namespace PropertyMap.Api.Controllers;
 public class ListingsController : ControllerBase
 {
     private readonly IListingRepository _listings;
+    private readonly IViewTrackingService _viewTracking;
 
-    public ListingsController(IListingRepository listings)
+    public ListingsController(IListingRepository listings, IViewTrackingService viewTracking)
     {
         _listings = listings;
+        _viewTracking = viewTracking;
     }
 
     [HttpGet]
@@ -26,6 +29,15 @@ public class ListingsController : ControllerBase
     {
         var listing = await _listings.GetByIdAsDetailAsync(id);
         if (listing == null) return NotFound();
+
+        try
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            await _viewTracking.TrackViewAsync(id, userId, ip, DateOnly.FromDateTime(DateTime.UtcNow));
+        }
+        catch { }
+
         return Ok(listing);
     }
 
