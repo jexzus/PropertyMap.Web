@@ -1,0 +1,120 @@
+@page "/account/consultas/{Id:int}"
+@page "/account/consultas/nueva"
+@rendermode InteractiveServer
+@inject IConsultasApiService ConsultasApi
+@inject IAuthService AuthService
+@inject NavigationManager Nav
+
+<PageTitle>Consulta — PropertyMap</PageTitle>
+
+<AuthorizeView>
+    <Authorized>
+        <div class="app-shell" style="display:flex;flex-direction:column">
+            <nav class="pm-navbar" role="navigation">
+                <a href="/" class="pm-navbar__logo">PropertyMap</a>
+                <span style="font-weight:600">@(detail?.PropertyTitulo ?? "Consulta")</span>
+                <div class="pm-navbar__actions">
+                    <a href="/account/consultas" class="btn-ghost">← Mis consultas</a>
+                </div>
+            </nav>
+
+            <div style="padding:var(--space-6,1.5rem);max-width:700px;margin:0 auto;width:100%;display:flex;flex-direction:column;gap:var(--space-4)">
+
+                @if (loading)
+                {
+                    <p style="color:var(--color-text-muted)">Cargando...</p>
+                }
+                else if (error is not null)
+                {
+                    <div style="color:#be123c">@error</div>
+                }
+                else
+                {
+                    @if (ListingId > 0 && detail is null)
+                    {
+                        <p style="color:var(--color-text-muted)">
+                            Escribí tu primer mensaje para iniciar la consulta sobre esta propiedad.
+                        </p>
+                    }
+
+                    <ConsultaThread
+                        Mensajes="@(detail?.Mensajes ?? [])"
+                        EsPublisher="false"
+                        OnSend="HandleSend" />
+                }
+            </div>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <div class="auth-page">
+            <div class="auth-card">
+                <a href="/" class="auth-logo">PropertyMap</a>
+                <p style="text-align:center">Necesitás iniciar sesión.</p>
+                <a href="/Account/Login" class="btn-primary auth-btn" style="text-align:center">
+                    Iniciar sesión
+                </a>
+            </div>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    [SupplyParameterFromQuery] public int ListingId { get; set; }
+
+    private PropertyMap.Core.DTOs.Consultas.ConsultaDetailDto? detail;
+    private bool loading = true;
+    private string? error;
+    private bool sessionRestored;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !sessionRestored)
+        {
+            sessionRestored = true;
+            await AuthService.TryRestoreSessionAsync();
+            await LoadDetail();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadDetail()
+    {
+        loading = true;
+        error = null;
+        try
+        {
+            if (Id > 0)
+            {
+                detail = await ConsultasApi.GetDetailAsync(Id);
+                if (detail is null) error = "No tenés acceso a esta consulta.";
+            }
+            else if (ListingId > 0)
+            {
+                // No thread yet — will create on first send
+                detail = null;
+            }
+            else
+            {
+                Nav.NavigateTo("/account/consultas");
+            }
+        }
+        catch { error = "Error al cargar la consulta."; }
+        finally { loading = false; }
+    }
+
+    private async Task HandleSend(string mensaje)
+    {
+        var listingIdToUse = detail?.PropertyListingId ?? ListingId;
+        if (listingIdToUse <= 0) return;
+
+        var result = await ConsultasApi.CreateOrContinueAsync(listingIdToUse, mensaje);
+        if (result is not null)
+        {
+            detail = result;
+            // Update URL to permanent thread URL on first message
+            if (Id == 0)
+                Nav.NavigateTo($"/account/consultas/{result.Id}", replace: true);
+        }
+    }
+}

@@ -1,0 +1,88 @@
+@page "/account/consultas"
+@rendermode InteractiveServer
+@inject IConsultasApiService ConsultasApi
+@inject IAuthService AuthService
+@inject NavigationManager Nav
+
+<PageTitle>Mis consultas — PropertyMap</PageTitle>
+
+<AuthorizeView>
+    <Authorized>
+        <div class="app-shell" style="display:flex;flex-direction:column">
+            <nav class="pm-navbar" role="navigation">
+                <a href="/" class="pm-navbar__logo">PropertyMap</a>
+                <span style="font-weight:600">Mis consultas</span>
+                <div class="pm-navbar__actions">
+                    <a href="/account/profile" class="btn-ghost">Mi perfil</a>
+                    <a href="/" class="btn-ghost">Volver al mapa</a>
+                </div>
+            </nav>
+
+            <div style="padding:var(--space-6,1.5rem);max-width:700px;margin:0 auto;width:100%">
+                <h1 style="font-size:1.5rem;font-weight:700;margin-bottom:var(--space-4)">
+                    Mis consultas
+                </h1>
+
+                @if (loading)
+                {
+                    <p style="color:var(--color-text-muted)">Cargando...</p>
+                }
+                else if (consultas.Count == 0)
+                {
+                    <div style="text-align:center;padding:var(--space-10) 0;color:var(--color-text-muted)">
+                        <p style="font-size:1.125rem">Todavía no iniciaste ninguna consulta.</p>
+                        <a href="/" class="btn-primary" style="margin-top:var(--space-4);display:inline-block">
+                            Explorar propiedades
+                        </a>
+                    </div>
+                }
+                else
+                {
+                    <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+                        @foreach (var c in consultas)
+                        {
+                            <a href="/account/consultas/@c.Id" class="consulta-card">
+                                <span class="consulta-card-title">@c.PropertyTitulo</span>
+                                <span class="consulta-card-preview">
+                                    @(c.UltimoEsDelPublisher ? "Publisher: " : "Vos: ")@c.UltimoMensaje
+                                </span>
+                                <span class="consulta-card-date">@c.FechaUltimoMensaje.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                            </a>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <div class="auth-page">
+            <div class="auth-card">
+                <a href="/" class="auth-logo">PropertyMap</a>
+                <p style="text-align:center">Necesitás iniciar sesión para ver tus consultas.</p>
+                <a href="/Account/Login?returnUrl=/account/consultas" class="btn-primary auth-btn" style="text-align:center">
+                    Iniciar sesión
+                </a>
+            </div>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<PropertyMap.Core.DTOs.Consultas.ConsultaSummaryDto> consultas = [];
+    private bool loading = true;
+    private bool sessionRestored;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !sessionRestored)
+        {
+            sessionRestored = true;
+            await AuthService.TryRestoreSessionAsync();
+            loading = true;
+            try { consultas = await ConsultasApi.GetMyConsultasAsync(); }
+            catch { consultas = []; }
+            finally { loading = false; }
+            StateHasChanged();
+        }
+    }
+}
