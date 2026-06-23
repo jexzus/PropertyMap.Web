@@ -1,0 +1,61 @@
+@using PropertyMap.Core.DTOs.Consultas
+
+<div class="consulta-thread">
+    <div class="consulta-messages">
+        @if (Mensajes.Count == 0)
+        {
+            <p class="consulta-empty">Todavía no hay mensajes en esta consulta.</p>
+        }
+        else
+        {
+            @foreach (var m in Mensajes)
+            {
+                var isMyMessage = m.EsDelPublisher == EsPublisher;
+                <div class="consulta-bubble-row @(isMyMessage ? "consulta-bubble-row--mine" : "consulta-bubble-row--theirs")">
+                    <div class="consulta-bubble @(isMyMessage ? "consulta-bubble--mine" : "consulta-bubble--theirs")">
+                        <span class="consulta-bubble-sender">@m.SenderNombre</span>
+                        <p class="consulta-bubble-text">@m.Mensaje</p>
+                        <span class="consulta-bubble-time">@m.FechaEnvio.ToLocalTime().ToString("dd/MM HH:mm")</span>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <div class="consulta-input-row">
+        <textarea class="consulta-input" rows="2"
+                  placeholder="Escribí tu mensaje..."
+                  @bind="newMensaje"
+                  @onkeydown="HandleKeyDown"></textarea>
+        <button class="btn-primary consulta-send-btn"
+                @onclick="Send"
+                disabled="@(string.IsNullOrWhiteSpace(newMensaje) || sending)">
+            @(sending ? "Enviando..." : "Enviar")
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<ConsultaMensajeDto> Mensajes { get; set; } = [];
+    [Parameter] public bool EsPublisher { get; set; }
+    [Parameter] public EventCallback<string> OnSend { get; set; }
+
+    private string newMensaje = "";
+    private bool sending;
+
+    private async Task Send()
+    {
+        if (string.IsNullOrWhiteSpace(newMensaje) || sending) return;
+        sending = true;
+        var texto = newMensaje;
+        newMensaje = "";
+        await OnSend.InvokeAsync(texto);
+        sending = false;
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+            await Send();
+    }
+}

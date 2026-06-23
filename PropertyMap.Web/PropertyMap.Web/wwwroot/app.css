@@ -1641,3 +1641,144 @@ html, body {
     font-size: 0.8125rem;
     font-weight: 600;
 }
+
+/* ── Consultas / Chat ── */
+.consulta-thread {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 1rem);
+  height: 100%;
+}
+
+.consulta-messages {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 0.75rem);
+  padding: var(--space-2, 0.5rem) 0;
+  max-height: 480px;
+}
+
+.consulta-empty {
+  color: var(--color-text-muted, #888);
+  text-align: center;
+  padding: var(--space-6, 1.5rem);
+}
+
+.consulta-bubble-row {
+  display: flex;
+}
+
+.consulta-bubble-row--mine {
+  justify-content: flex-end;
+}
+
+.consulta-bubble-row--theirs {
+  justify-content: flex-start;
+}
+
+.consulta-bubble {
+  max-width: 72%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.consulta-bubble--mine {
+  background: #be123c;
+  color: #fff;
+  border-bottom-right-radius: 2px;
+}
+
+.consulta-bubble--theirs {
+  background: var(--color-surface-secondary, #f3f4f6);
+  color: var(--color-text, #1a1a1a);
+  border-bottom-left-radius: 2px;
+}
+
+.consulta-bubble-sender {
+  font-size: 0.7rem;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.consulta-bubble-text {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.consulta-bubble-time {
+  font-size: 0.7rem;
+  opacity: 0.6;
+  align-self: flex-end;
+}
+
+.consulta-input-row {
+  display: flex;
+  gap: var(--space-2, 0.5rem);
+  align-items: flex-end;
+}
+
+.consulta-input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  resize: none;
+  font-family: inherit;
+  line-height: 1.4;
+}
+
+.consulta-input:focus {
+  outline: none;
+  border-color: #be123c;
+}
+
+.consulta-send-btn {
+  white-space: nowrap;
+  align-self: flex-end;
+}
+
+/* Consulta summary cards */
+.consulta-card {
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 10px;
+  padding: var(--space-4, 1rem);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1, 0.25rem);
+  cursor: pointer;
+  transition: box-shadow 0.15s ease;
+  text-decoration: none;
+  color: inherit;
+}
+
+.consulta-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.consulta-card-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--color-text, #1a1a1a);
+}
+
+.consulta-card-preview {
+  font-size: 0.85rem;
+  color: var(--color-text-muted, #888);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.consulta-card-date {
+  font-size: 0.75rem;
+  color: var(--color-text-muted, #888);
+}
