@@ -49,6 +49,8 @@ builder.Services.AddScoped<AuthenticationStateProvider>(sp =>
 // Servicios de la app
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPropertyApiService, PropertyApiService>();
+builder.Services.AddScoped<IUserApiService, UserApiService>();
+builder.Services.AddScoped<IFavoritesApiService, FavoritesApiService>();
 
 // Repos (aún necesarios mientras Program.cs corre DbSeeder)
 builder.Services.AddScoped<IListingRepository, ListingRepository>();
