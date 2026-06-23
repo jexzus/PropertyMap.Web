@@ -89,6 +89,8 @@ public class ConsultaRepository : IConsultaRepository
             .Select(l => l.Id)
             .ToListAsync();
 
+        if (listingIds.Count == 0) return [];
+
         return await _ctx.Consultas
             .Where(c => listingIds.Contains(c.PropertyListingId))
             .OrderByDescending(c => c.FechaUltimoMensaje)
@@ -104,8 +106,9 @@ public class ConsultaRepository : IConsultaRepository
 
     public async Task<ConsultaMensajeDto> AddMessageAsync(ConsultaMensaje message)
     {
-        var consulta = await _ctx.Consultas.FindAsync(message.ConsultaId);
-        consulta!.FechaUltimoMensaje = message.FechaEnvio;
+        var consulta = await _ctx.Consultas.FindAsync(message.ConsultaId)
+            ?? throw new InvalidOperationException($"Consulta {message.ConsultaId} not found.");
+        consulta.FechaUltimoMensaje = message.FechaEnvio;
         _ctx.ConsultaMensajes.Add(message);
         await _ctx.SaveChangesAsync();
 
