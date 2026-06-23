@@ -9,9 +9,11 @@
         <AuthorizeView>
             <Authorized>
                 <a href="/account/favorites" class="btn-ghost">♥ Favoritos</a>
+                <a href="/account/consultas" class="btn-ghost">Consultas</a>
                 <a href="/account/profile" class="btn-ghost">Mi perfil</a>
                 <AuthorizeView Roles="Publisher" Context="publisherCtx">
                     <Authorized Context="pAuth">
+                        <a href="/publisher/consultas" class="btn-ghost">Consultas recibidas</a>
                         <a href="/publisher/dashboard" class="btn-ghost">Mi panel</a>
                         <a href="/publicar" class="btn-primary">Publicar</a>
                     </Authorized>

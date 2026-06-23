@@ -85,6 +85,14 @@ else
                     <div style="display:flex;align-items:center;gap:var(--space-3)">
                         <div class="detail-price">@FormatPrice()</div>
                         <FavoriteButton ListingId="@Id" />
+                        <AuthorizeView>
+                            <Authorized>
+                                <a href="/account/consultas/nueva?listingId=@Id" class="btn-ghost"
+                                   style="font-size:0.875rem">
+                                    Consultar al publisher
+                                </a>
+                            </Authorized>
+                        </AuthorizeView>
                     </div>
                 </div>
 
