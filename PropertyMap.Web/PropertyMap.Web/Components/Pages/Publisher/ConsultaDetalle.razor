@@ -1,0 +1,88 @@
+@page "/publisher/consultas/{Id:int}"
+@rendermode InteractiveServer
+@inject IConsultasApiService ConsultasApi
+@inject IAuthService AuthService
+@inject NavigationManager Nav
+
+<PageTitle>Consulta — PropertyMap</PageTitle>
+
+<AuthorizeView Roles="Publisher">
+    <Authorized>
+        <div class="app-shell" style="display:flex;flex-direction:column">
+            <nav class="pm-navbar" role="navigation">
+                <a href="/" class="pm-navbar__logo">PropertyMap</a>
+                <span style="font-weight:600">@(detail?.PropertyTitulo ?? "Consulta")</span>
+                <div class="pm-navbar__actions">
+                    <a href="/publisher/consultas" class="btn-ghost">← Consultas</a>
+                </div>
+            </nav>
+
+            <div style="padding:var(--space-6,1.5rem);max-width:700px;margin:0 auto;width:100%;display:flex;flex-direction:column;gap:var(--space-4)">
+
+                @if (loading)
+                {
+                    <p style="color:var(--color-text-muted)">Cargando...</p>
+                }
+                else if (error is not null)
+                {
+                    <div style="color:#be123c">@error</div>
+                }
+                else if (detail is not null)
+                {
+                    <ConsultaThread
+                        Mensajes="@detail.Mensajes"
+                        EsPublisher="true"
+                        OnSend="HandleReply" />
+                }
+            </div>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <div class="auth-page">
+            <div class="auth-card">
+                <a href="/" class="auth-logo">PropertyMap</a>
+                <p style="text-align:center">Acceso solo para publishers.</p>
+                <a href="/Account/Login" class="btn-primary auth-btn" style="text-align:center">
+                    Iniciar sesión
+                </a>
+            </div>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private PropertyMap.Core.DTOs.Consultas.ConsultaDetailDto? detail;
+    private bool loading = true;
+    private string? error;
+    private bool sessionRestored;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !sessionRestored)
+        {
+            sessionRestored = true;
+            await AuthService.TryRestoreSessionAsync();
+            loading = true;
+            error = null;
+            try
+            {
+                detail = await ConsultasApi.GetDetailAsync(Id);
+                if (detail is null) error = "No tenés acceso a esta consulta.";
+            }
+            catch { error = "Error al cargar la consulta."; }
+            finally { loading = false; }
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleReply(string mensaje)
+    {
+        var msgDto = await ConsultasApi.ReplyAsync(Id, mensaje);
+        if (msgDto is not null && detail is not null)
+        {
+            detail = detail with { Mensajes = [..detail.Mensajes, msgDto] };
+        }
+    }
+}
