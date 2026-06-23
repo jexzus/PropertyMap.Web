@@ -163,4 +163,23 @@ public class ConsultasControllerTests : IClassFixture<TestWebApplicationFactory>
 
         Assert.Equal(HttpStatusCode.Forbidden, replyResp.StatusCode);
     }
+
+    [Fact]
+    public async Task PublisherReply_WrongPublisher_ReturnsForbid()
+    {
+        var (_, _, listingId) = await SetupPublishedListingAsync();
+        var (userClient, _) = await TestAuthHelper.CreateAuthenticatedUserAsync(_factory);
+        var postResp = await userClient.PostAsJsonAsync("/api/consultas",
+            new CreateConsultaRequest(listingId, "Consulta"));
+        var detail = await postResp.Content.ReadFromJsonAsync<ConsultaDetailDto>();
+
+        // A different publisher — not the owner of this listing
+        var (otherPubClient, _) = await TestAuthHelper.CreateAuthenticatedPublisherAsync(_factory);
+        await TestAuthHelper.CreatePublisherProfileAsync(otherPubClient);
+        var replyResp = await otherPubClient.PostAsJsonAsync(
+            $"/api/consultas/{detail!.Id}/mensajes",
+            new SendMensajeRequest("Respuesta no autorizada"));
+
+        Assert.Equal(HttpStatusCode.Forbidden, replyResp.StatusCode);
+    }
 }

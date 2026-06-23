@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using PropertyMap.Core.DTOs.Consultas;
 using PropertyMap.Core.Entities;
 using PropertyMap.Core.Enums;
@@ -17,15 +18,18 @@ public class ConsultasController : ControllerBase
     private readonly IConsultaRepository _consultas;
     private readonly IEmailService _email;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly ILogger<ConsultasController> _logger;
 
     public ConsultasController(
         IConsultaRepository consultas,
         IEmailService email,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        ILogger<ConsultasController> logger)
     {
         _consultas = consultas;
         _email = email;
         _userManager = userManager;
+        _logger = logger;
     }
 
     // POST /api/consultas — user creates or continues a thread
@@ -71,7 +75,7 @@ public class ConsultasController : ControllerBase
                     request.Mensaje);
             }
         }
-        catch { }
+        catch (Exception ex) { _logger.LogWarning(ex, "Failed to send notification for consulta {Id}", consulta.Id); }
 
         var detail = await _consultas.GetByIdAsync(consulta.Id, userId);
         return Ok(detail);
@@ -150,7 +154,7 @@ public class ConsultasController : ControllerBase
                     request.Mensaje);
             }
         }
-        catch { }
+        catch (Exception ex) { _logger.LogWarning(ex, "Failed to send reply notification for consulta {Id}", id); }
 
         return Ok(msgDto);
     }

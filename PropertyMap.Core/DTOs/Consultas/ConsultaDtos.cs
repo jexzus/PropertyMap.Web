@@ -1,8 +1,10 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace PropertyMap.Core.DTOs.Consultas;
 
-public record CreateConsultaRequest(int ListingId, string Mensaje);
+public record CreateConsultaRequest(int ListingId, [MaxLength(2000)] string Mensaje);
 
-public record SendMensajeRequest(string Mensaje);
+public record SendMensajeRequest([MaxLength(2000)] string Mensaje);
 
 public record ConsultaSummaryDto(
     int Id,
