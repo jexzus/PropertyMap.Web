@@ -82,7 +82,10 @@ else
                             @detail.DireccionTexto, @detail.Ciudad, @detail.Provincia
                         </p>
                     </div>
-                    <div class="detail-price">@FormatPrice()</div>
+                    <div style="display:flex;align-items:center;gap:var(--space-3)">
+                        <div class="detail-price">@FormatPrice()</div>
+                        <FavoriteButton ListingId="@Id" />
+                    </div>
                 </div>
 
                 @* Stats ── *@

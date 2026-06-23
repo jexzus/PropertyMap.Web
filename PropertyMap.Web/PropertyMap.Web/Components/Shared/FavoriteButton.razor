@@ -1,0 +1,54 @@
+@inject IFavoritesApiService FavoritesApi
+@inject NavigationManager Nav
+@using Microsoft.AspNetCore.Components.Authorization
+
+<button class="favorite-btn @(isFavorited ? "favorite-btn--active" : "")"
+        @onclick="Toggle"
+        title="@(isFavorited ? "Quitar de favoritos" : "Guardar en favoritos")"
+        aria-label="@(isFavorited ? "Quitar de favoritos" : "Guardar en favoritos")">
+    <svg width="20" height="20" viewBox="0 0 24 24"
+         fill="@(isFavorited ? "currentColor" : "none")"
+         stroke="currentColor" stroke-width="2">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+    </svg>
+    @if (count > 0)
+    {
+        <span class="favorite-btn__count">@count</span>
+    }
+</button>
+
+@code {
+    [Parameter, EditorRequired] public int ListingId { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
+    private bool isFavorited;
+    private int count;
+    private bool isAuthenticated;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthState != null)
+        {
+            var state = await AuthState;
+            isAuthenticated = state.User.Identity?.IsAuthenticated ?? false;
+        }
+        var (fav, cnt) = await FavoritesApi.GetStatusAsync(ListingId);
+        isFavorited = fav;
+        count = cnt;
+    }
+
+    private async Task Toggle()
+    {
+        if (!isAuthenticated)
+        {
+            Nav.NavigateTo($"/Account/Login?returnUrl=/property/{ListingId}");
+            return;
+        }
+        var newState = await FavoritesApi.ToggleFavoriteAsync(ListingId, isFavorited);
+        if (newState && !isFavorited) count++;
+        else if (!newState && isFavorited && count > 0) count--;
+        isFavorited = newState;
+    }
+}
