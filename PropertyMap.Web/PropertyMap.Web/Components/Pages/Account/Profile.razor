@@ -1,0 +1,151 @@
+@page "/account/profile"
+@rendermode InteractiveServer
+@inject IUserApiService UserApi
+@inject IAuthService AuthService
+@inject NavigationManager Nav
+
+<PageTitle>Mi perfil — PropertyMap</PageTitle>
+
+<AuthorizeView>
+    <Authorized>
+        <div class="auth-page">
+            <div class="auth-card" style="max-width:480px">
+                <a href="/" class="auth-logo">PropertyMap</a>
+                <h1 class="auth-title">Mi perfil</h1>
+
+                @if (saveSuccess)
+                {
+                    <div class="auth-success">Perfil actualizado correctamente.</div>
+                }
+                @if (error is not null)
+                {
+                    <div class="auth-error">@error</div>
+                }
+
+                @* Avatar *@
+                <div class="profile-avatar-section">
+                    <div class="profile-avatar">
+                        @if (avatarPreview is not null)
+                        {
+                            <img src="@avatarPreview" alt="Avatar" class="profile-avatar-img" />
+                        }
+                        else
+                        {
+                            <div class="profile-avatar-placeholder">
+                                @(nombre.Length > 0 ? nombre[0].ToString().ToUpper() : "?")
+                            </div>
+                        }
+                    </div>
+                    <label class="btn-ghost profile-avatar-btn" style="cursor:pointer">
+                        Cambiar foto
+                        <InputFile OnChange="OnAvatarSelected" accept="image/jpeg,image/png,image/webp"
+                                   style="display:none" />
+                    </label>
+                    @if (avatarUploading)
+                    {
+                        <span style="font-size:0.8rem;color:var(--color-text-muted)">Subiendo...</span>
+                    }
+                </div>
+
+                @* Nombre y Apellido *@
+                <div class="field-row">
+                    <div class="field">
+                        <label class="field-label" for="nombre">Nombre</label>
+                        <input id="nombre" type="text" class="field-input"
+                               @bind="nombre" placeholder="Tu nombre" />
+                    </div>
+                    <div class="field">
+                        <label class="field-label" for="apellido">Apellido</label>
+                        <input id="apellido" type="text" class="field-input"
+                               @bind="apellido" placeholder="Tu apellido" />
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label class="field-label">Email</label>
+                    <input type="email" class="field-input" value="@email" disabled />
+                </div>
+
+                <button class="btn-primary auth-btn" @onclick="Save" disabled="@saving">
+                    @(saving ? "Guardando..." : "Guardar cambios")
+                </button>
+            </div>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <div class="auth-page">
+            <div class="auth-card">
+                <a href="/" class="auth-logo">PropertyMap</a>
+                <p style="text-align:center">Necesitás iniciar sesión para ver tu perfil.</p>
+                <a href="/Account/Login?returnUrl=/account/profile" class="btn-primary auth-btn" style="text-align:center">
+                    Iniciar sesión
+                </a>
+            </div>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private string nombre = "";
+    private string apellido = "";
+    private string email = "";
+    private string? avatarPreview;
+    private string? error;
+    private bool saving;
+    private bool saveSuccess;
+    private bool avatarUploading;
+    private bool sessionRestored;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !sessionRestored)
+        {
+            sessionRestored = true;
+            await AuthService.TryRestoreSessionAsync();
+            await LoadProfile();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadProfile()
+    {
+        var profile = await UserApi.GetProfileAsync();
+        if (profile is null) return;
+        nombre = profile.Nombre;
+        apellido = profile.Apellido;
+        email = profile.Email;
+        avatarPreview = profile.AvatarUrl;
+    }
+
+    private async Task Save()
+    {
+        if (string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(apellido))
+        {
+            error = "Nombre y apellido son requeridos.";
+            return;
+        }
+        saving = true;
+        error = null;
+        saveSuccess = false;
+        var (ok, err) = await UserApi.UpdateProfileAsync(nombre, apellido);
+        saving = false;
+        if (ok) saveSuccess = true;
+        else error = err;
+    }
+
+    private async Task OnAvatarSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file.Size > 5 * 1024 * 1024)
+        {
+            error = "El archivo supera 5 MB.";
+            return;
+        }
+        avatarUploading = true;
+        error = null;
+        var (ok, url, err) = await UserApi.UploadAvatarAsync(file);
+        avatarUploading = false;
+        if (ok) avatarPreview = url;
+        else error = err;
+    }
+}
