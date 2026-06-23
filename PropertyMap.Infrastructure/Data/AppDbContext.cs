@@ -21,6 +21,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<PropertyQuestion> PropertyQuestions => Set<PropertyQuestion>();
     public DbSet<PropertyAnswer> PropertyAnswers => Set<PropertyAnswer>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<Consulta> Consultas => Set<Consulta>();
+    public DbSet<ConsultaMensaje> ConsultaMensajes => Set<ConsultaMensaje>();
     public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
     public DbSet<Alert> Alerts => Set<Alert>();
     public DbSet<Report> Reports => Set<Report>();
@@ -160,6 +162,29 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
             .HasOne(a => a.Publisher)
             .WithMany()
             .HasForeignKey(a => a.PublisherId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        // Consulta — unique thread per user-property pair
+        modelBuilder.Entity<Consulta>()
+            .HasIndex(c => new { c.PropertyListingId, c.UserId }).IsUnique();
+
+        modelBuilder.Entity<Consulta>()
+            .HasOne(c => c.User)
+            .WithMany()
+            .HasForeignKey(c => c.UserId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<Consulta>()
+            .HasMany(c => c.Mensajes)
+            .WithOne(m => m.Consulta)
+            .HasForeignKey(m => m.ConsultaId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // ConsultaMensaje sender — avoid multiple cascade paths
+        modelBuilder.Entity<ConsultaMensaje>()
+            .HasOne(m => m.Sender)
+            .WithMany()
+            .HasForeignKey(m => m.SenderId)
             .OnDelete(DeleteBehavior.NoAction);
     }
 }
