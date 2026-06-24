@@ -8,9 +8,10 @@
 
 <h1>Top Agentes</h1>
 
-<div class="mb-3 d-flex gap-2">
-    <input type="text" @bind="_ciudad" @bind:event="oninput" placeholder="Filtrar por ciudad..." class="form-control" style="max-width:250px" />
-    <button class="btn btn-outline-secondary" @onclick="LoadRanking">Filtrar</button>
+<div style="display:flex;gap:var(--space-2);margin-bottom:var(--space-4)">
+    <input type="text" @bind="_ciudad" @bind:event="oninput" placeholder="Filtrar por ciudad..."
+           style="padding:var(--space-2) var(--space-3);border:1px solid var(--color-border);border-radius:var(--radius-sm);max-width:250px;font-family:var(--font-sans);font-size:var(--text-sm);color:var(--color-ink);background:var(--color-bg);outline:none" />
+    <button class="btn-ghost" @onclick="LoadRanking">Filtrar</button>
 </div>
 
 @if (_loading)
@@ -19,21 +20,21 @@
 }
 else if (_ranking.Count == 0)
 {
-    <p class="text-muted">No hay agentes rankeados todavía.</p>
+    <p style="color:var(--color-muted)">No hay agentes rankeados todavía.</p>
 }
 else
 {
-    <table class="table table-hover">
+    <table style="width:100%;border-collapse:collapse">
         <thead>
             <tr>
-                <th>#</th>
-                <th>Nombre</th>
-                <th>Tipo</th>
-                <th>Score</th>
-                <th>Rating</th>
-                <th>T. Respuesta</th>
-                <th>Operaciones</th>
-                <th>Antigüedad</th>
+                <th style="border-bottom:1px solid var(--color-border);padding:var(--space-2) var(--space-3);text-align:left">#</th>
+                <th style="border-bottom:1px solid var(--color-border);padding:var(--space-2) var(--space-3);text-align:left">Nombre</th>
+                <th style="border-bottom:1px solid var(--color-border);padding:var(--space-2) var(--space-3);text-align:left">Tipo</th>
+                <th style="border-bottom:1px solid var(--color-border);padding:var(--space-2) var(--space-3);text-align:left">Score</th>
+                <th style="border-bottom:1px solid var(--color-border);padding:var(--space-2) var(--space-3);text-align:left">Rating</th>
+                <th style="border-bottom:1px solid var(--color-border);padding:var(--space-2) var(--space-3);text-align:left">T. Respuesta</th>
+                <th style="border-bottom:1px solid var(--color-border);padding:var(--space-2) var(--space-3);text-align:left">Operaciones</th>
+                <th style="border-bottom:1px solid var(--color-border);padding:var(--space-2) var(--space-3);text-align:left">Antigüedad</th>
             </tr>
         </thead>
         <tbody>
@@ -42,14 +43,14 @@ else
                 var agent = _ranking[i];
                 var pos = i + 1;
                 <tr>
-                    <td>@pos</td>
-                    <td>@agent.Nombre</td>
-                    <td>@agent.Tipo</td>
-                    <td>@agent.RankingScore.ToString("F1")</td>
-                    <td>@agent.RatingPromedio.ToString("F1") ★</td>
-                    <td>@agent.TiempoRespuestaHoras.ToString("F0")h</td>
-                    <td>@agent.Operaciones</td>
-                    <td>@agent.AntiguedadAnios.ToString("F1") años</td>
+                    <td style="border-bottom:1px solid var(--color-border);padding:var(--space-2) var(--space-3)">@pos</td>
+                    <td style="border-bottom:1px solid var(--color-border);padding:var(--space-2) var(--space-3)">@agent.Nombre</td>
+                    <td style="border-bottom:1px solid var(--color-border);padding:var(--space-2) var(--space-3)">@agent.Tipo</td>
+                    <td style="border-bottom:1px solid var(--color-border);padding:var(--space-2) var(--space-3)">@agent.RankingScore.ToString("F1")</td>
+                    <td style="border-bottom:1px solid var(--color-border);padding:var(--space-2) var(--space-3)">@agent.RatingPromedio.ToString("F1") ★</td>
+                    <td style="border-bottom:1px solid var(--color-border);padding:var(--space-2) var(--space-3)">@agent.TiempoRespuestaHoras.ToString("F0")h</td>
+                    <td style="border-bottom:1px solid var(--color-border);padding:var(--space-2) var(--space-3)">@agent.Operaciones</td>
+                    <td style="border-bottom:1px solid var(--color-border);padding:var(--space-2) var(--space-3)">@agent.AntiguedadAnios.ToString("F1") años</td>
                 </tr>
             }
         </tbody>
