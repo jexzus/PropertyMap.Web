@@ -41,6 +41,20 @@
                         Mensajes="@(detail?.Mensajes ?? [])"
                         EsPublisher="false"
                         OnSend="HandleSend" />
+
+                    @if (detail?.OperacionPropiedad == "AlquilerTemporario" && detail?.PropertyListingId != null)
+                    {
+                        <div class="mt-4">
+                            <PropertyRatingForm ListingId="detail.PropertyListingId" />
+                        </div>
+                    }
+
+                    @if (detail?.PublisherId != null)
+                    {
+                        <div class="mt-4">
+                            <AgentRatingForm PublisherId="detail.PublisherId.Value" />
+                        </div>
+                    }
                 }
             </div>
         </div>
