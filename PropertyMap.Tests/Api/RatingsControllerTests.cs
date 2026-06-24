@@ -287,12 +287,10 @@ public class RatingsControllerTests : IClassFixture<TestWebApplicationFactory>
 
         // Create a user and send consultas to both listings
         var (userClient, _) = await TestAuthHelper.CreateAuthenticatedUserAsync(_factory);
-        var consultaRespA = await userClient.PostAsJsonAsync("/api/consultas",
+        await userClient.PostAsJsonAsync("/api/consultas",
             new CreateConsultaRequest(createdA.Id, "Consulta BA"));
-        var consultaDetailA = await consultaRespA.Content.ReadFromJsonAsync<ConsultaDetailDto>();
-        var consultaRespB = await userClient.PostAsJsonAsync("/api/consultas",
+        await userClient.PostAsJsonAsync("/api/consultas",
             new CreateConsultaRequest(createdB.Id, "Consulta Cba"));
-        var consultaDetailB = await consultaRespB.Content.ReadFromJsonAsync<ConsultaDetailDto>();
 
         // Rate both agents
         await userClient.PostAsJsonAsync("/api/ratings/agent",

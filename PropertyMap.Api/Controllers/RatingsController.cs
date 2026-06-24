@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using PropertyMap.Core.DTOs.Ratings;
 using PropertyMap.Core.Entities;
 using PropertyMap.Core.Enums;
@@ -16,15 +17,18 @@ public class RatingsController : ControllerBase
     private readonly IPropertyRatingRepository _propertyRatings;
     private readonly IAgentRatingRepository _agentRatings;
     private readonly IListingRepository _listings;
+    private readonly ILogger<RatingsController> _logger;
 
     public RatingsController(
         IPropertyRatingRepository propertyRatings,
         IAgentRatingRepository agentRatings,
-        IListingRepository listings)
+        IListingRepository listings,
+        ILogger<RatingsController> logger)
     {
         _propertyRatings = propertyRatings;
         _agentRatings = agentRatings;
         _listings = listings;
+        _logger = logger;
     }
 
     [HttpPost("property")]
