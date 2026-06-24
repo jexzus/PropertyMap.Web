@@ -25,4 +25,6 @@ public record ConsultaDetailDto(
     int Id,
     int PropertyListingId,
     string PropertyTitulo,
+    string OperacionPropiedad,
+    int? PublisherId,
     List<ConsultaMensajeDto> Mensajes);

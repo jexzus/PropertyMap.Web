@@ -56,6 +56,8 @@ public class ConsultaRepository : IConsultaRepository
             consulta.Id,
             consulta.PropertyListingId,
             consulta.PropertyListing.Titulo,
+            consulta.PropertyListing.Operacion.ToString(),
+            consulta.PropertyListing.Publisher?.Id,
             consulta.Mensajes
                 .OrderBy(m => m.FechaEnvio)
                 .Select(m => new ConsultaMensajeDto(
