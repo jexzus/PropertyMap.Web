@@ -1,0 +1,40 @@
+@* RatingStars.razor *@
+<div class="rating-stars @(ReadOnly ? "readonly" : "interactive")">
+    @for (int i = 1; i <= 5; i++)
+    {
+        var star = i; // capture for closure
+        @if (ReadOnly)
+        {
+            <span class="star @StarClass(star)">@(StarClass(star) == "star-half" ? "⯨" : StarClass(star) == "star-full" ? "★" : "☆")</span>
+        }
+        else
+        {
+            <span class="star @StarClass(star)"
+                  @onclick="() => HandleClick(star)"
+                  @onmouseover="() => _hover = star"
+                  @onmouseout="() => _hover = 0">★</span>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public double Value { get; set; }
+    [Parameter] public bool ReadOnly { get; set; }
+    [Parameter] public EventCallback<int> OnChange { get; set; }
+
+    private int _hover = 0;
+
+    private string StarClass(int star)
+    {
+        double display = ReadOnly ? Value : (_hover > 0 ? _hover : Value);
+        if (star <= display) return "star-full";
+        if (star - 0.5 <= display) return "star-half";
+        return "star-empty";
+    }
+
+    private async Task HandleClick(int star)
+    {
+        if (!ReadOnly)
+            await OnChange.InvokeAsync(star);
+    }
+}

@@ -1782,3 +1782,12 @@ html, body {
   font-size: 0.75rem;
   color: var(--color-text-muted, #888);
 }
+
+/* ===== Rating Stars ===== */
+.rating-stars { display: inline-flex; gap: 2px; }
+.rating-stars .star { font-size: 1.4rem; line-height: 1; cursor: default; transition: color 0.1s; }
+.rating-stars.interactive .star { cursor: pointer; }
+.star-full  { color: #f59e0b; }
+.star-half  { color: #f59e0b; opacity: 0.6; }
+.star-empty { color: #d1d5db; }
+.rating-stars.interactive .star:hover { transform: scale(1.15); }
