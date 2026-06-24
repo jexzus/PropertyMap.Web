@@ -1,0 +1,86 @@
+@inject IRatingsApiService RatingsService
+@using PropertyMap.Core.DTOs.Ratings
+@using PropertyMap.Web.Services
+
+<div class="rating-form">
+    <h4>Valorar esta propiedad</h4>
+
+    @if (_success)
+    {
+        <p class="text-success">¡Gracias por tu valoración!</p>
+        @if (Stats is not null)
+        {
+            <div class="rating-stats mt-2">
+                <small class="text-muted">Promedios actualizados:</small>
+                <div class="d-flex flex-column gap-1 mt-1">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted" style="min-width:130px">Ubicación</span>
+                        <RatingStars Value="Stats.PromedioUbicacion" ReadOnly="true" />
+                        <small class="text-muted">(@Stats.PromedioUbicacion.ToString("F1"))</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted" style="min-width:130px">Estado</span>
+                        <RatingStars Value="Stats.PromedioEstado" ReadOnly="true" />
+                        <small class="text-muted">(@Stats.PromedioEstado.ToString("F1"))</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted" style="min-width:130px">Precio / Calidad</span>
+                        <RatingStars Value="Stats.PrecioCal" ReadOnly="true" />
+                        <small class="text-muted">(@Stats.PrecioCal.ToString("F1"))</small>
+                    </div>
+                </div>
+                <div class="mt-1">
+                    <small class="text-muted">@Stats.TotalValoraciones valoración(es) en total</small>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="rating-criterion">
+            <label>Ubicación</label>
+            <RatingStars Value="_ubicacion" ReadOnly="false" OnChange="v => _ubicacion = v" />
+        </div>
+        <div class="rating-criterion">
+            <label>Estado</label>
+            <RatingStars Value="_estado" ReadOnly="false" OnChange="v => _estado = v" />
+        </div>
+        <div class="rating-criterion">
+            <label>Precio / Calidad</label>
+            <RatingStars Value="_precio" ReadOnly="false" OnChange="v => _precio = v" />
+        </div>
+        <textarea @bind="_comentario" placeholder="Comentario opcional..." rows="3" class="form-control mt-2"></textarea>
+
+        @if (_error is not null)
+        {
+            <p class="text-danger mt-2">@_error</p>
+        }
+
+        <button class="btn btn-primary mt-2" @onclick="Submit" disabled="@(!CanSubmit)">Valorar</button>
+    }
+</div>
+
+@code {
+    [Parameter] public int ListingId { get; set; }
+    [Parameter] public PropertyRatingStatsDto? Stats { get; set; }
+
+    private int _ubicacion, _estado, _precio;
+    private string? _comentario, _error;
+    private bool _success;
+
+    private bool CanSubmit => _ubicacion > 0 && _estado > 0 && _precio > 0;
+
+    private async Task Submit()
+    {
+        _error = null;
+        var result = await RatingsService.RatePropertyAsync(new RatePropertyRequest(
+            ListingId, _ubicacion, _estado, _precio, _comentario));
+        if (result is null)
+            _error = "No se pudo guardar la valoración. Verificá que tengas una consulta activa.";
+        else
+        {
+            _success = true;
+            Stats = result;
+        }
+    }
+}
