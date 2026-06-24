@@ -212,5 +212,101 @@ public class RatingsControllerTests : IClassFixture<TestWebApplicationFactory>
         var ranking = await resp.Content.ReadFromJsonAsync<List<AgentRankingItemDto>>();
         Assert.NotNull(ranking);
         Assert.Contains(ranking!, r => r.PublisherId == publisherId);
+        // Verify descending order
+        for (int i = 0; i < ranking!.Count - 1; i++)
+            Assert.True(ranking[i].RankingScore >= ranking[i + 1].RankingScore);
+    }
+
+    [Fact]
+    public async Task GetRanking_WithCiudadFilter_ReturnsOnlyMatchingCity()
+    {
+        // Create publisher A with a listing in Buenos Aires
+        var (pubClientA, _) = await TestAuthHelper.CreateAuthenticatedPublisherAsync(_factory);
+        var publisherIdA = await TestAuthHelper.CreatePublisherProfileAsync(pubClientA);
+        var listingA = new CreateListingRequest(
+            Operacion: TipoOperacion.AlquilerTemporario,
+            TipoPropiedad: TipoPropiedad.Departamento,
+            Titulo: "Alquiler BA Test",
+            Descripcion: "Test BA",
+            Precio: 5000,
+            Moneda: "ARS",
+            DireccionTexto: "Av. Corrientes 123",
+            Ciudad: "Buenos Aires",
+            Provincia: "Buenos Aires",
+            Lat: -34.60, Lng: -58.38,
+            Superficie: null, SuperficieCubierta: null, Ambientes: null,
+            Dormitorios: null, Banos: null, Antiguedad: null,
+            Cochera: false, Amenities: []);
+        var createRespA = await pubClientA.PostAsJsonAsync("/api/properties", listingA);
+        var createdA = await createRespA.Content.ReadFromJsonAsync<CreatedIdDto>();
+
+        // Create publisher B with a listing in Córdoba
+        var (pubClientB, _) = await TestAuthHelper.CreateAuthenticatedPublisherAsync(_factory);
+        var publisherIdB = await TestAuthHelper.CreatePublisherProfileAsync(pubClientB);
+        var listingB = new CreateListingRequest(
+            Operacion: TipoOperacion.AlquilerTemporario,
+            TipoPropiedad: TipoPropiedad.Departamento,
+            Titulo: "Alquiler Cba Test",
+            Descripcion: "Test Cba",
+            Precio: 4000,
+            Moneda: "ARS",
+            DireccionTexto: "Av. Colón 456",
+            Ciudad: "Córdoba",
+            Provincia: "Córdoba",
+            Lat: -31.42, Lng: -64.18,
+            Superficie: null, SuperficieCubierta: null, Ambientes: null,
+            Dormitorios: null, Banos: null, Antiguedad: null,
+            Cochera: false, Amenities: []);
+        var createRespB = await pubClientB.PostAsJsonAsync("/api/properties", listingB);
+        var createdB = await createRespB.Content.ReadFromJsonAsync<CreatedIdDto>();
+
+        // Approve both listings via admin
+        using var adminScope = _factory.Services.CreateScope();
+        var adminMgr = adminScope.ServiceProvider
+            .GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<PropertyMap.Core.Entities.ApplicationUser>>();
+        var adminEmail = $"admin_city_{Guid.NewGuid()}@test.com";
+        var adminUser = new PropertyMap.Core.Entities.ApplicationUser
+        {
+            UserName = adminEmail, Email = adminEmail,
+            Nombre = "Admin", Apellido = "City",
+            EmailConfirmed = true,
+            Estado = PropertyMap.Core.Enums.EstadoUsuario.Activo
+        };
+        await adminMgr.CreateAsync(adminUser, "Admin123!");
+        await adminMgr.AddToRoleAsync(adminUser, "Admin");
+        var adminClient = _factory.CreateClient();
+        var adminLoginResp = await adminClient.PostAsJsonAsync("/api/auth/login",
+            new PropertyMap.Core.DTOs.Auth.LoginRequest(adminEmail, "Admin123!"));
+        var adminAuth = await adminLoginResp.Content.ReadFromJsonAsync<PropertyMap.Core.DTOs.Auth.AuthResponse>();
+        adminClient.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminAuth!.AccessToken);
+        await adminClient.PatchAsJsonAsync($"/api/admin/listings/{createdA!.Id}/review",
+            new { Aprobar = true, MotivoRechazo = (string?)null });
+        await adminClient.PatchAsJsonAsync($"/api/admin/listings/{createdB!.Id}/review",
+            new { Aprobar = true, MotivoRechazo = (string?)null });
+
+        // Create a user and send consultas to both listings
+        var (userClient, _) = await TestAuthHelper.CreateAuthenticatedUserAsync(_factory);
+        var consultaRespA = await userClient.PostAsJsonAsync("/api/consultas",
+            new CreateConsultaRequest(createdA.Id, "Consulta BA"));
+        var consultaDetailA = await consultaRespA.Content.ReadFromJsonAsync<ConsultaDetailDto>();
+        var consultaRespB = await userClient.PostAsJsonAsync("/api/consultas",
+            new CreateConsultaRequest(createdB.Id, "Consulta Cba"));
+        var consultaDetailB = await consultaRespB.Content.ReadFromJsonAsync<ConsultaDetailDto>();
+
+        // Rate both agents
+        await userClient.PostAsJsonAsync("/api/ratings/agent",
+            new RateAgentRequest(publisherIdA, 5, 5, 5, 5, null));
+        await userClient.PostAsJsonAsync("/api/ratings/agent",
+            new RateAgentRequest(publisherIdB, 4, 4, 4, 4, null));
+
+        // Call ranking with city filter for Buenos Aires
+        var resp = await _factory.CreateClient().GetAsync("/api/ratings/ranking?ciudad=Buenos+Aires");
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var ranking = await resp.Content.ReadFromJsonAsync<List<AgentRankingItemDto>>();
+        Assert.NotNull(ranking);
+        Assert.Contains(ranking!, r => r.PublisherId == publisherIdA);
+        Assert.DoesNotContain(ranking!, r => r.PublisherId == publisherIdB);
     }
 }
