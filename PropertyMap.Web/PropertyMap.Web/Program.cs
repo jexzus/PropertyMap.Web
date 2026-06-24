@@ -52,6 +52,7 @@ builder.Services.AddScoped<IPropertyApiService, PropertyApiService>();
 builder.Services.AddScoped<IUserApiService, UserApiService>();
 builder.Services.AddScoped<IFavoritesApiService, FavoritesApiService>();
 builder.Services.AddScoped<IConsultasApiService, ConsultasApiService>();
+builder.Services.AddScoped<IRatingsApiService, RatingsApiService>();
 
 // Repos (aún necesarios mientras Program.cs corre DbSeeder)
 builder.Services.AddScoped<IListingRepository, ListingRepository>();
