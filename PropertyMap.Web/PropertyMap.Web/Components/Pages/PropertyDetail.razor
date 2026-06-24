@@ -1,7 +1,9 @@
 @page "/property/{Id:int}"
 @using PropertyMap.Core.DTOs
+@using PropertyMap.Core.DTOs.Ratings
 @inject IListingApiService ListingApi
 @inject NavigationManager Nav
+@inject IRatingsApiService RatingsService
 @rendermode InteractiveServer
 
 <PageTitle>@(detail?.Titulo ?? "Propiedad") — PropertyMap</PageTitle>
@@ -82,8 +84,15 @@ else
                             @detail.DireccionTexto, @detail.Ciudad, @detail.Provincia
                         </p>
                     </div>
-                    <div style="display:flex;align-items:center;gap:var(--space-3)">
+                    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:var(--space-1)">
                         <div class="detail-price">@FormatPrice()</div>
+                        @if (_ratingStats?.TotalValoraciones > 0)
+                        {
+                            <div class="d-flex align-items-center gap-2 mt-1">
+                                <RatingStars Value="_ratingStats.PromedioGeneral" ReadOnly="true" />
+                                <span class="text-muted small">@_ratingStats.PromedioGeneral.ToString("F1") (@_ratingStats.TotalValoraciones valoraciones)</span>
+                            </div>
+                        }
                         <FavoriteButton ListingId="@Id" />
                         <AuthorizeView>
                             <Authorized>
@@ -223,10 +232,13 @@ else
     private ListingDetailDto? detail;
     private bool loading = true;
     private int galleryIdx;
+    private PropertyRatingStatsDto? _ratingStats;
 
     protected override async Task OnInitializedAsync()
     {
         detail = await ListingApi.GetByIdAsync(Id);
+        if (detail is not null)
+            _ratingStats = await RatingsService.GetPropertyStatsAsync(detail.Id);
         loading = false;
     }
 
