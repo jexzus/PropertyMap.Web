@@ -9,10 +9,13 @@ using PropertyMap.Core.Interfaces;
 using PropertyMap.Infrastructure.Data;
 using PropertyMap.Infrastructure.Repositories;
 using PropertyMap.Infrastructure.Services;
+using PropertyMap.Api.Hubs;
+using PropertyMap.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -72,6 +75,19 @@ builder.Services.AddAuthentication(options =>
             Encoding.UTF8.GetBytes(jwtSettings["Secret"]!)),
         ClockSkew = TimeSpan.Zero
     };
+    options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
+    };
 });
 
 builder.Services.AddCors(options =>
@@ -95,6 +111,11 @@ builder.Services.AddScoped<IViewTrackingService, ViewTrackingService>();
 builder.Services.AddScoped<IConsultaRepository, ConsultaRepository>();
 builder.Services.AddScoped<IPropertyRatingRepository, PropertyRatingRepository>();
 builder.Services.AddScoped<IAgentRatingRepository, AgentRatingRepository>();
+builder.Services.AddScoped<IAlertRepository, AlertRepository>();
+builder.Services.AddScoped<IReportRepository, ReportRepository>();
+builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+builder.Services.AddScoped<IAlertMatchingService, AlertMatchingService>();
+builder.Services.AddScoped<INotificationPublisher, SignalRNotificationPublisher>();
 
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
 {
@@ -119,6 +140,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseStaticFiles();
 app.MapControllers();
+app.MapHub<NotificationsHub>("/hubs/notifications");
 
 using (var scope = app.Services.CreateScope())
 {
