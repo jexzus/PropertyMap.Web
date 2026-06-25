@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.*" />
     <ProjectReference Include="..\..\PropertyMap.Core\PropertyMap.Core.csproj" />
     <ProjectReference Include="..\..\PropertyMap.Infrastructure\PropertyMap.Infrastructure.csproj" />
     <ProjectReference Include="..\PropertyMap.Web.Client\PropertyMap.Web.Client.csproj" />
