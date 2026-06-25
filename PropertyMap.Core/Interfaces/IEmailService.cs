@@ -13,4 +13,10 @@ public interface IEmailService
     Task SendNuevaRespuestaAsync(
         string toEmail, string userNombre,
         string propertyTitulo, string publisherNombre, string mensaje);
+
+    Task SendAlertMatchAsync(
+        string toEmail, string userNombre,
+        string alertNombre, string propertyTitulo, int propertyId);
+
+    Task SendReportConfirmationAsync(string toEmail, string userNombre, string propertyTitulo);
 }

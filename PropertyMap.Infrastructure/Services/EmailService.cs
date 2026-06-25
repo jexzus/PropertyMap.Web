@@ -123,4 +123,40 @@ public class EmailService : IEmailService
             """;
         await SendAsync(toEmail, userNombre, $"Respuesta de {publisherNombre}", html);
     }
+
+    public async Task SendAlertMatchAsync(
+        string toEmail, string userNombre,
+        string alertNombre, string propertyTitulo, int propertyId)
+    {
+        var html = $"""
+            <!DOCTYPE html>
+            <html>
+            <body style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:24px">
+              <h2 style="color:#be123c">¡Nueva propiedad para tu alerta!</h2>
+              <p>Hola <strong>{userNombre}</strong>,</p>
+              <p>Se publicó una propiedad que coincide con tu alerta <strong>{alertNombre}</strong>:</p>
+              <blockquote style="border-left:3px solid #be123c;padding-left:12px;color:#333;margin:16px 0">
+                {propertyTitulo}
+              </blockquote>
+              <p><a href="https://propertymap.com.ar/propiedad/{propertyId}" style="background:#be123c;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block">Ver propiedad</a></p>
+            </body>
+            </html>
+            """;
+        await SendAsync(toEmail, userNombre, $"Nueva propiedad: {propertyTitulo}", html);
+    }
+
+    public async Task SendReportConfirmationAsync(string toEmail, string userNombre, string propertyTitulo)
+    {
+        var html = $"""
+            <!DOCTYPE html>
+            <html>
+            <body style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:24px">
+              <h2 style="color:#be123c">Recibimos tu reporte</h2>
+              <p>Hola <strong>{userNombre}</strong>,</p>
+              <p>Recibimos tu reporte sobre <strong>{propertyTitulo}</strong>. Nuestro equipo de moderación lo va a revisar.</p>
+            </body>
+            </html>
+            """;
+        await SendAsync(toEmail, userNombre, "Recibimos tu reporte en PropertyMap", html);
+    }
 }
