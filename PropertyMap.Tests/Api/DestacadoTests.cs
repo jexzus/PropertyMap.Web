@@ -109,10 +109,23 @@ public class DestacadoTests : IClassFixture<TestWebApplicationFactory>
         await pubClient.PostAsJsonAsync("/api/subscriptions", new SubscribeRequest(profesional.Id));
         await pubClient.PatchAsync($"/api/properties/{listingId}/destacar", null);
 
+        // Create a second listing AFTER the destacado one, so by FechaPublicacion alone
+        // this newer, non-destacado listing would sort first. If the production code's
+        // OrderByDescending(l => l.Destacado) is removed/regressed, this newer listing
+        // would appear before the (older) destacado one, and the assertion below would fail.
+        var (_, otherListingId, _) = await CreateApprovedListingAsync();
+
         var mapResp = await _factory.CreateClient().GetAsync("/api/listings/map");
         var mapListings = await mapResp.Content.ReadFromJsonAsync<List<PropertyMap.Core.DTOs.ListingMapDto>>();
 
         Assert.NotNull(mapListings);
         Assert.Contains(mapListings!, l => l.Id == listingId);
+        Assert.Contains(mapListings!, l => l.Id == otherListingId);
+
+        var destacadoIndex = mapListings!.FindIndex(l => l.Id == listingId);
+        var otherIndex = mapListings!.FindIndex(l => l.Id == otherListingId);
+        Assert.True(destacadoIndex < otherIndex,
+            $"Expected destacado listing (index {destacadoIndex}) to appear before the newer, " +
+            $"non-destacado listing (index {otherIndex}), proving Destacado ordering takes precedence over FechaPublicacion.");
     }
 }
