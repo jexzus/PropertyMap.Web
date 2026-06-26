@@ -116,6 +116,9 @@ builder.Services.AddScoped<IReportRepository, ReportRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IAlertMatchingService, AlertMatchingService>();
 builder.Services.AddScoped<INotificationPublisher, SignalRNotificationPublisher>();
+builder.Services.AddScoped<IPlanRepository, PlanRepository>();
+builder.Services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
+builder.Services.AddScoped<IListingStatsRepository, ListingStatsRepository>();
 
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
 {
