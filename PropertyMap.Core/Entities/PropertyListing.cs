@@ -24,6 +24,7 @@ public class PropertyListing
     public bool Cochera { get; set; }
     public List<string> Amenities { get; set; } = [];
     public EstadoPublicacion Estado { get; set; } = EstadoPublicacion.Borrador;
+    public bool Destacado { get; set; }
     public DateTime FechaPublicacion { get; set; } = DateTime.UtcNow;
     public DateTime FechaActualizacion { get; set; } = DateTime.UtcNow;
     public ICollection<PropertyImage> Images { get; set; } = [];
