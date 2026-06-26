@@ -106,4 +106,28 @@ public static class DbSeeder
 
         await context.SaveChangesAsync();
     }
+
+    public static async Task SeedPlansAsync(AppDbContext context)
+    {
+        if (await context.Plans.AnyAsync()) return;
+
+        context.Plans.AddRange(
+            new Plan
+            {
+                Nombre = "Gratuito", Slug = "gratuito", PrecioMensual = 0m, Moneda = "ARS",
+                MaxPublicaciones = 3, DestacadosIncluidos = 0, EstadisticasAvanzadas = false, Activo = true
+            },
+            new Plan
+            {
+                Nombre = "Profesional", Slug = "profesional", PrecioMensual = 15000m, Moneda = "ARS",
+                MaxPublicaciones = 20, DestacadosIncluidos = 3, EstadisticasAvanzadas = true, Activo = true
+            },
+            new Plan
+            {
+                Nombre = "Premium", Slug = "premium", PrecioMensual = 35000m, Moneda = "ARS",
+                MaxPublicaciones = null, DestacadosIncluidos = 10, EstadisticasAvanzadas = true, Activo = true
+            }
+        );
+        await context.SaveChangesAsync();
+    }
 }

@@ -104,6 +104,7 @@ using (var scope = app.Services.CreateScope())
         {
             await db.Database.MigrateAsync();
             await PropertyMap.Infrastructure.Data.DbSeeder.SeedAsync(db, userManager);
+            await PropertyMap.Infrastructure.Data.DbSeeder.SeedPlansAsync(db);
             break;
         }
         catch (Microsoft.Data.SqlClient.SqlException) when (attempt < maxAttempts)
