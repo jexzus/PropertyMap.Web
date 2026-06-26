@@ -73,9 +73,12 @@
                                             <span>✓ @s.Conversiones</span>
                                         </div>
                                     }
-                                    <button class="btn-ghost" @onclick="() => ToggleDestacadoAsync(l.Id)">
-                                        @(l.Estado == "Publicada" ? "★ Destacar / Quitar" : "")
-                                    </button>
+                                    @if (l.Estado == "Publicada")
+                                    {
+                                        <button class="btn-ghost" @onclick="() => ToggleDestacadoAsync(l.Id)">
+                                            ★ Destacar / Quitar
+                                        </button>
+                                    }
                                 </div>
                                 <span class="dashboard-listing-status @StatusClass(l.Estado)">
                                     @StatusLabel(l.Estado)
