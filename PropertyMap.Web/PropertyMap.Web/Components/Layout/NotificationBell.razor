@@ -1,0 +1,79 @@
+@rendermode InteractiveServer
+@using PropertyMap.Core.DTOs.Notifications
+@using PropertyMap.Web.Services
+@inject INotificationsApiService NotificationsApi
+@inject NotificationHubClient HubClient
+@implements IAsyncDisposable
+
+<div class="pm-notif-bell">
+    <button class="btn-ghost" @onclick="ToggleOpen" aria-label="Notificaciones">
+        🔔 @(_unreadCount > 0 ? $"({_unreadCount})" : "")
+    </button>
+
+    @if (_open)
+    {
+        <div class="pm-notif-dropdown">
+            @if (_notifications.Count == 0)
+            {
+                <p style="padding:var(--space-3);color:var(--color-muted)">Sin notificaciones.</p>
+            }
+            else
+            {
+                @foreach (var n in _notifications)
+                {
+                    <a href="@(n.UrlAccion ?? "#")" class="pm-notif-item" @onclick="() => MarkRead(n.Id)">
+                        <strong>@n.Titulo</strong>
+                        <p>@n.Mensaje</p>
+                    </a>
+                }
+                <button class="btn-ghost" @onclick="MarkAllRead">Marcar todo como leído</button>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<NotificationDto> _notifications = [];
+    private int _unreadCount;
+    private bool _open;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshAsync();
+        HubClient.OnNotificationReceived += OnPushed;
+        await HubClient.StartAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        _notifications = await NotificationsApi.GetMyNotificationsAsync();
+        _unreadCount = await NotificationsApi.GetUnreadCountAsync();
+    }
+
+    private void OnPushed(NotificationDto dto)
+    {
+        _notifications.Insert(0, dto);
+        _unreadCount++;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ToggleOpen() => _open = !_open;
+
+    private async Task MarkRead(int id)
+    {
+        await NotificationsApi.MarkAsReadAsync(id);
+        await RefreshAsync();
+    }
+
+    private async Task MarkAllRead()
+    {
+        await NotificationsApi.MarkAllAsReadAsync();
+        await RefreshAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        HubClient.OnNotificationReceived -= OnPushed;
+        await HubClient.DisposeAsync();
+    }
+}

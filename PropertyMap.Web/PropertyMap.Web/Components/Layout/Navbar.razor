@@ -9,8 +9,10 @@
         <a href="/top-agentes" class="btn-ghost">Top Agentes</a>
         <AuthorizeView>
             <Authorized>
+                <NotificationBell />
                 <a href="/account/favorites" class="btn-ghost">♥ Favoritos</a>
                 <a href="/account/consultas" class="btn-ghost">Consultas</a>
+                <a href="/account/alertas" class="btn-ghost">Alertas</a>
                 <a href="/account/profile" class="btn-ghost">Mi perfil</a>
                 <AuthorizeView Roles="Publisher" Context="publisherCtx">
                     <Authorized Context="pAuth">

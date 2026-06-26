@@ -1,0 +1,91 @@
+@page "/account/alertas"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
+@using PropertyMap.Core.DTOs.Alerts
+@using PropertyMap.Core.Enums
+@using PropertyMap.Web.Services
+@inject IAlertsApiService AlertsApi
+
+<h1>Mis alertas de búsqueda</h1>
+
+<div class="pm-alert-form">
+    <input @bind="_nombre" placeholder="Nombre de la alerta (opcional)" />
+    <select @bind="_operacion">
+        <option value="">Cualquier operación</option>
+        @foreach (var op in Enum.GetValues<TipoOperacion>())
+        {
+            <option value="@op">@op</option>
+        }
+    </select>
+    <select @bind="_tipoPropiedad">
+        <option value="">Cualquier tipo</option>
+        @foreach (var tp in Enum.GetValues<TipoPropiedad>())
+        {
+            <option value="@tp">@tp</option>
+        }
+    </select>
+    <input @bind="_ciudad" placeholder="Ciudad (opcional)" />
+    <input @bind="_precioMax" type="number" placeholder="Precio máximo (opcional)" />
+    <input @bind="_dormitoriosMin" type="number" placeholder="Dormitorios mínimos (opcional)" />
+    <button class="btn-primary" @onclick="CreateAsync">Crear alerta</button>
+</div>
+
+@if (_alerts.Count == 0)
+{
+    <p>No tenés alertas creadas todavía.</p>
+}
+else
+{
+    @foreach (var a in _alerts)
+    {
+        <div class="pm-alert-card">
+            <strong>@(a.Nombre ?? "Alerta sin nombre")</strong>
+            <p>
+                @(a.Operacion?.ToString() ?? "Cualquier operación") ·
+                @(a.TipoPropiedad?.ToString() ?? "Cualquier tipo") ·
+                @(a.Ciudad ?? "Cualquier ciudad")
+                @(a.PrecioMax is not null ? $" · hasta {a.PrecioMax} {a.Moneda}" : "")
+            </p>
+            <button class="btn-ghost" @onclick="() => ToggleAsync(a.Id)">
+                @(a.Activa ? "Desactivar" : "Activar")
+            </button>
+            <button class="btn-ghost" @onclick="() => DeleteAsync(a.Id)">Eliminar</button>
+        </div>
+    }
+}
+
+@code {
+    private List<AlertDto> _alerts = [];
+    private string? _nombre;
+    private TipoOperacion? _operacion;
+    private TipoPropiedad? _tipoPropiedad;
+    private string? _ciudad;
+    private decimal? _precioMax;
+    private int? _dormitoriosMin;
+
+    protected override async Task OnInitializedAsync() => await RefreshAsync();
+
+    private async Task RefreshAsync() => _alerts = await AlertsApi.GetMyAlertsAsync();
+
+    private async Task CreateAsync()
+    {
+        await AlertsApi.CreateAsync(new CreateAlertRequest(
+            _nombre, _operacion, _tipoPropiedad, _ciudad, _precioMax, "USD", _dormitoriosMin));
+        _nombre = null; _operacion = null; _tipoPropiedad = null;
+        _ciudad = null; _precioMax = null; _dormitoriosMin = null;
+        await RefreshAsync();
+    }
+
+    private async Task ToggleAsync(int id)
+    {
+        await AlertsApi.ToggleAsync(id);
+        await RefreshAsync();
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        await AlertsApi.DeleteAsync(id);
+        await RefreshAsync();
+    }
+}
