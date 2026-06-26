@@ -16,6 +16,8 @@ public class ListingRepository(AppDbContext ctx) : IListingRepository
             .Where(l => l.Estado == EstadoPublicacion.Publicada)
             .Include(l => l.Location)
             .Include(l => l.Publisher)
+            .OrderByDescending(l => l.Destacado)
+            .ThenByDescending(l => l.FechaPublicacion)
             .ToListAsync();
 
     public async Task<IEnumerable<PropertyListing>> GetListingsByPublisherAsync(int publisherId) =>
@@ -29,6 +31,8 @@ public class ListingRepository(AppDbContext ctx) : IListingRepository
         await ctx.PropertyListings
             .Where(l => l.Estado == EstadoPublicacion.Publicada)
             .Include(l => l.Location)
+            .OrderByDescending(l => l.Destacado)
+            .ThenByDescending(l => l.FechaPublicacion)
             .Select(l => new ListingMapDto(
                 l.Id,
                 l.Location.Latitud,

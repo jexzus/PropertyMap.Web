@@ -18,19 +18,22 @@ public class PropertiesController : ControllerBase
     private readonly ILocationRepository _locations;
     private readonly IImageService _images;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly ISubscriptionRepository _subscriptions;
 
     public PropertiesController(
         IListingRepository listings,
         IPublisherRepository publishers,
         ILocationRepository locations,
         IImageService images,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        ISubscriptionRepository subscriptions)
     {
         _listings = listings;
         _publishers = publishers;
         _locations = locations;
         _images = images;
         _userManager = userManager;
+        _subscriptions = subscriptions;
     }
 
     [HttpGet("mine")]
@@ -251,6 +254,35 @@ public class PropertiesController : ControllerBase
         await _images.DeleteImageAsync(url);
 
         return NoContent();
+    }
+
+    [HttpPatch("{id:int}/destacar")]
+    [Authorize(Roles = "Publisher")]
+    public async Task<IActionResult> ToggleDestacado(int id)
+    {
+        var listing = await _listings.GetByIdAsync(id);
+        if (listing == null) return NotFound();
+
+        if (!await IsOwner(listing)) return Forbid();
+
+        if (!listing.Destacado)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var subscription = await _subscriptions.GetByUserIdAsync(userId);
+            var limite = subscription?.Plan.DestacadosIncluidos ?? 0;
+
+            var listingsByPublisher = await _listings.GetListingsByPublisherAsync(listing.PublisherId);
+            var destacadosActuales = listingsByPublisher.Count(l => l.Destacado);
+
+            if (destacadosActuales >= limite)
+                return BadRequest(new { message = $"Tu plan permite hasta {limite} propiedades destacadas. Desactivá una o mejorá tu plan en /planes." });
+        }
+
+        listing.Destacado = !listing.Destacado;
+        listing.FechaActualizacion = DateTime.UtcNow;
+        await _listings.UpdateAsync(listing);
+
+        return Ok(new { destacado = listing.Destacado });
     }
 
     private async Task<bool> IsOwner(PropertyListing listing)
