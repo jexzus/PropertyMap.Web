@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PropertyMap.Core.DTOs.Properties;
 using PropertyMap.Core.DTOs.Reports;
 using PropertyMap.Core.Enums;
+using PropertyMap.Infrastructure.Data;
 using Xunit;
 
 namespace PropertyMap.Tests.Api;
@@ -18,6 +19,7 @@ public class ReportsControllerTests : IClassFixture<TestWebApplicationFactory>
     }
 
     private record CreatedIdDto(int id);
+    private record ListingIdDto(int Id);
 
     private async Task<(HttpClient adminClient, int listingId)> SetupApprovedListingAsync()
     {
@@ -88,9 +90,17 @@ public class ReportsControllerTests : IClassFixture<TestWebApplicationFactory>
             new ReviewReportRequest(EstadoReporte.Resuelto));
         Assert.Equal(HttpStatusCode.NoContent, reviewResp.StatusCode);
 
-        var listingResp = await adminClient.GetAsync($"/api/properties/{listingId}");
-        var detail = await listingResp.Content.ReadFromJsonAsync<PropertyMap.Core.DTOs.ListingDetailDto>();
-        var allListings = await adminClient.GetFromJsonAsync<List<object>>("/api/admin/listings");
+        // The listing should no longer be active/published (GET /api/admin/listings only
+        // returns Estado == Publicada listings, per ListingRepository.GetActiveListingsAsync).
+        var allListings = await adminClient.GetFromJsonAsync<List<ListingIdDto>>("/api/admin/listings");
         Assert.NotNull(allListings);
+        Assert.DoesNotContain(allListings!, l => l.Id == listingId);
+
+        // Definitive check: read the listing's Estado directly from the database.
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var listing = await db.PropertyListings.FindAsync(listingId);
+        Assert.NotNull(listing);
+        Assert.Equal(EstadoPublicacion.Pausada, listing!.Estado);
     }
 }
