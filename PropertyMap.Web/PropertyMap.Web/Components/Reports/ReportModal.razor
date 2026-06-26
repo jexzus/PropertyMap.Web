@@ -1,0 +1,53 @@
+@using PropertyMap.Core.DTOs.Reports
+@using PropertyMap.Core.Enums
+@using PropertyMap.Web.Services
+@inject IReportsApiService ReportsApi
+
+@if (IsOpen)
+{
+    <div class="pm-modal-overlay">
+        <div class="pm-modal">
+            <h3>Reportar propiedad</h3>
+            <select @bind="_motivo">
+                @foreach (var m in Enum.GetValues<MotivoReporte>())
+                {
+                    <option value="@m">@m</option>
+                }
+            </select>
+            <textarea @bind="_descripcion" placeholder="Detalles (opcional)"></textarea>
+            @if (_sent)
+            {
+                <p>Gracias, recibimos tu reporte.</p>
+            }
+            else
+            {
+                <button class="btn-primary" @onclick="SendAsync">Enviar reporte</button>
+            }
+            <button class="btn-ghost" @onclick="Close">Cerrar</button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public int PropertyListingId { get; set; }
+    [Parameter] public EventCallback OnClosed { get; set; }
+
+    private MotivoReporte _motivo = MotivoReporte.Otro;
+    private string? _descripcion;
+    private bool _sent;
+
+    private async Task SendAsync()
+    {
+        await ReportsApi.CreateAsync(new CreateReportRequest(PropertyListingId, _motivo, _descripcion));
+        _sent = true;
+    }
+
+    private async Task Close()
+    {
+        IsOpen = false;
+        _sent = false;
+        _descripcion = null;
+        await OnClosed.InvokeAsync();
+    }
+}

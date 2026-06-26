@@ -14,6 +14,11 @@
                 <a href="/account/consultas" class="btn-ghost">Consultas</a>
                 <a href="/account/alertas" class="btn-ghost">Alertas</a>
                 <a href="/account/profile" class="btn-ghost">Mi perfil</a>
+                <AuthorizeView Roles="Admin" Context="adminCtx">
+                    <Authorized Context="aAuth">
+                        <a href="/admin/reportes" class="btn-ghost">Reportes</a>
+                    </Authorized>
+                </AuthorizeView>
                 <AuthorizeView Roles="Publisher" Context="publisherCtx">
                     <Authorized Context="pAuth">
                         <a href="/publisher/consultas" class="btn-ghost">Consultas recibidas</a>

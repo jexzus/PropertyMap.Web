@@ -1874,3 +1874,37 @@ html, body {
   gap: var(--space-1);
 }
 .pm-alert-card p { color: var(--color-muted); font-size: var(--text-sm); }
+
+.pm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: oklch(0.175 0.010 20 / 0.50);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+}
+
+.pm-modal {
+  background: var(--color-bg);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  max-width: 420px;
+  width: 90%;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.pm-report-card {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin-bottom: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.pm-report-card p { color: var(--color-muted); font-size: var(--text-sm); }

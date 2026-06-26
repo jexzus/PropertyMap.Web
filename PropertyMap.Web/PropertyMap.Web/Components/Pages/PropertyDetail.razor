@@ -1,6 +1,7 @@
 @page "/property/{Id:int}"
 @using PropertyMap.Core.DTOs
 @using PropertyMap.Core.DTOs.Ratings
+@using PropertyMap.Web.Components.Reports
 @inject IListingApiService ListingApi
 @inject NavigationManager Nav
 @inject IRatingsApiService RatingsService
@@ -100,6 +101,9 @@ else
                                    style="font-size:0.875rem">
                                     Consultar al publisher
                                 </a>
+                                <button class="btn-ghost" @onclick="() => _reportModalOpen = true">Reportar</button>
+                                <ReportModal IsOpen="_reportModalOpen" PropertyListingId="@Id"
+                                             OnClosed="@(() => _reportModalOpen = false)" />
                             </Authorized>
                         </AuthorizeView>
                     </div>
@@ -233,6 +237,7 @@ else
     private bool loading = true;
     private int galleryIdx;
     private PropertyRatingStatsDto? _ratingStats;
+    private bool _reportModalOpen;
 
     protected override async Task OnInitializedAsync()
     {
