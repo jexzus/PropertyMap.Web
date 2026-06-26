@@ -3,6 +3,7 @@
 @inject IPropertyApiService PropertyApi
 @inject IAuthService AuthService
 @inject NavigationManager Nav
+@inject IStatsApiService StatsApi
 
 <PageTitle>Mi panel — PropertyMap</PageTitle>
 
@@ -13,6 +14,7 @@
                 <a href="/" class="pm-navbar__logo">PropertyMap</a>
                 <span style="font-weight:600">Mi panel</span>
                 <div class="pm-navbar__actions">
+                    <a href="/planes" class="btn-ghost">Planes</a>
                     <a href="/publicar" class="btn-primary">+ Publicar</a>
                     <button class="btn-ghost" @onclick="Logout">Salir</button>
                 </div>
@@ -62,6 +64,18 @@
                                     <div class="dashboard-listing-price">
                                         @l.Moneda @l.Precio.ToString("N0")
                                     </div>
+                                    @if (StatsFor(l.Id) is { } s)
+                                    {
+                                        <div class="pm-listing-stats">
+                                            <span>👁 @s.Vistas</span>
+                                            <span>♥ @s.Favoritos</span>
+                                            <span>💬 @s.Consultas</span>
+                                            <span>✓ @s.Conversiones</span>
+                                        </div>
+                                    }
+                                    <button class="btn-ghost" @onclick="() => ToggleDestacadoAsync(l.Id)">
+                                        @(l.Estado == "Publicada" ? "★ Destacar / Quitar" : "")
+                                    </button>
                                 </div>
                                 <span class="dashboard-listing-status @StatusClass(l.Estado)">
                                     @StatusLabel(l.Estado)
@@ -88,6 +102,7 @@
 
 @code {
     private List<PropertyMap.Core.DTOs.Properties.MyListingDto> listings = [];
+    private List<PropertyMap.Core.DTOs.Stats.ListingStatsDto> stats = [];
     private bool loading = true;
     private bool sessionRestored;
 
@@ -108,15 +123,26 @@
         try
         {
             listings = await PropertyApi.GetMyListingsAsync();
+            stats = await StatsApi.GetMineAsync();
         }
         catch
         {
             listings = [];
+            stats = [];
         }
         finally
         {
             loading = false;
         }
+    }
+
+    private PropertyMap.Core.DTOs.Stats.ListingStatsDto? StatsFor(int listingId) =>
+        stats.FirstOrDefault(s => s.ListingId == listingId);
+
+    private async Task ToggleDestacadoAsync(int listingId)
+    {
+        await PropertyApi.ToggleDestacadoAsync(listingId);
+        await LoadListings();
     }
 
     private async Task Logout()

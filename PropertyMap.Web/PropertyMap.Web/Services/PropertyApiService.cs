@@ -80,6 +80,17 @@ public class PropertyApiService : IPropertyApiService
         return created!.Id;
     }
 
+    public async Task<bool> ToggleDestacadoAsync(int listingId)
+    {
+        try
+        {
+            SetAuth();
+            var resp = await _http.PatchAsync($"api/properties/{listingId}/destacar", null);
+            return resp.IsSuccessStatusCode;
+        }
+        catch { return false; }
+    }
+
     private record CreatedIdDto(int Id);
     private record UploadUrlsDto(List<string> Urls);
 }

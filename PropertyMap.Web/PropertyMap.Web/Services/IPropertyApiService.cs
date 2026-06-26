@@ -11,4 +11,5 @@ public interface IPropertyApiService
     Task<List<MyListingDto>> GetMyListingsAsync();
     Task<PublisherProfileResponse?> GetPublisherProfileAsync();
     Task<int> EnsurePublisherProfileAsync(string nombre, string telefono);
+    Task<bool> ToggleDestacadoAsync(int listingId);
 }

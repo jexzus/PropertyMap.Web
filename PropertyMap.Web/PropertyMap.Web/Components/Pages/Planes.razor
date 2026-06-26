@@ -1,0 +1,63 @@
+@page "/planes"
+@rendermode InteractiveServer
+@using PropertyMap.Core.DTOs.Plans
+@using PropertyMap.Web.Services
+@inject IPlansApiService PlansApi
+
+<PageTitle>Planes — PropertyMap</PageTitle>
+
+<div class="app-shell" style="display:flex;flex-direction:column">
+    <nav class="pm-navbar" role="navigation">
+        <a href="/" class="pm-navbar__logo">PropertyMap</a>
+    </nav>
+
+    <div style="padding:var(--space-6);max-width:960px;margin:0 auto;width:100%">
+        <h1 style="font-size:1.5rem;font-weight:700;margin-bottom:var(--space-4)">Planes para publishers</h1>
+
+        @if (_mine is not null)
+        {
+            <p class="pm-plan-current">Tu plan actual: <strong>@_mine.PlanNombre</strong> (vence @_mine.FechaVencimiento.ToString("dd/MM/yyyy"))</p>
+        }
+
+        <div class="pm-plans-grid">
+            @foreach (var plan in _plans)
+            {
+                <div class="pm-plan-card">
+                    <h3>@plan.Nombre</h3>
+                    <p class="pm-plan-price">@plan.Moneda @plan.PrecioMensual.ToString("N0") /mes</p>
+                    <ul>
+                        <li>@(plan.MaxPublicaciones is null ? "Publicaciones ilimitadas" : $"Hasta {plan.MaxPublicaciones} publicaciones")</li>
+                        <li>@plan.DestacadosIncluidos destacados incluidos</li>
+                        <li>@(plan.EstadisticasAvanzadas ? "Estadísticas avanzadas" : "Estadísticas básicas")</li>
+                    </ul>
+                    <AuthorizeView>
+                        <Authorized>
+                            <button class="btn-primary" @onclick="() => SubscribeAsync(plan.Id)" disabled="@(_mine?.PlanId == plan.Id)">
+                                @(_mine?.PlanId == plan.Id ? "Plan actual" : "Elegir este plan")
+                            </button>
+                        </Authorized>
+                        <NotAuthorized>
+                            <a href="/Account/Login?returnUrl=/planes" class="btn-primary">Iniciar sesión para elegir</a>
+                        </NotAuthorized>
+                    </AuthorizeView>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<PlanDto> _plans = [];
+    private SubscriptionDto? _mine;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _plans = await PlansApi.GetActiveAsync();
+        _mine = await PlansApi.GetMineAsync();
+    }
+
+    private async Task SubscribeAsync(int planId)
+    {
+        _mine = await PlansApi.SubscribeAsync(planId);
+    }
+}
