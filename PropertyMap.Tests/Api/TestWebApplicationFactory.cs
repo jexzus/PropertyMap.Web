@@ -53,6 +53,9 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
                 roleManager.CreateAsync(new IdentityRole(role)).GetAwaiter().GetResult();
         }
 
+        var db = scope.ServiceProvider.GetRequiredService<PropertyMap.Infrastructure.Data.AppDbContext>();
+        PropertyMap.Infrastructure.Data.DbSeeder.SeedPlansAsync(db).GetAwaiter().GetResult();
+
         return host;
     }
 }
