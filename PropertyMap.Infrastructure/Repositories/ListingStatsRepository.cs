@@ -23,11 +23,52 @@ public class ListingStatsRepository(AppDbContext ctx) : IListingStatsRepository
             .Select(l => new { l.Id, l.Titulo })
             .ToListAsync();
 
-        var result = new List<ListingStatsDto>();
-        foreach (var l in listings)
-            result.Add(await BuildStatsAsync(l.Id, l.Titulo));
+        var listingIds = listings.Select(l => l.Id).ToList();
 
-        return result;
+        var vistasPorListing = await ctx.PropertyViews
+            .Where(v => listingIds.Contains(v.PropertyListingId))
+            .GroupBy(v => v.PropertyListingId)
+            .Select(g => new { g.Key, Count = g.Count() })
+            .ToDictionaryAsync(g => g.Key, g => g.Count);
+
+        var favoritosPorListing = await ctx.PropertyFavorites
+            .Where(f => listingIds.Contains(f.PropertyListingId))
+            .GroupBy(f => f.PropertyListingId)
+            .Select(g => new { g.Key, Count = g.Count() })
+            .ToDictionaryAsync(g => g.Key, g => g.Count);
+
+        var consultasPorListing = await ctx.Consultas
+            .Where(c => listingIds.Contains(c.PropertyListingId))
+            .GroupBy(c => c.PropertyListingId)
+            .Select(g => new { g.Key, Count = g.Count() })
+            .ToDictionaryAsync(g => g.Key, g => g.Count);
+
+        var consultaIdToListing = await ctx.Consultas
+            .Where(c => listingIds.Contains(c.PropertyListingId))
+            .Select(c => new { c.Id, c.PropertyListingId })
+            .ToListAsync();
+        var consultaIdToListingMap = consultaIdToListing.ToDictionary(c => c.Id, c => c.PropertyListingId);
+
+        // Conversión = consulta con al menos un mensaje de respuesta del publisher.
+        var consultaIdsConRespuesta = await ctx.ConsultaMensajes
+            .Where(m => consultaIdToListingMap.Keys.Contains(m.ConsultaId) && m.EsDelPublisher)
+            .Select(m => m.ConsultaId)
+            .Distinct()
+            .ToListAsync();
+
+        var conversionesPorListing = consultaIdsConRespuesta
+            .GroupBy(consultaId => consultaIdToListingMap[consultaId])
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        return listings
+            .Select(l => new ListingStatsDto(
+                l.Id,
+                l.Titulo,
+                vistasPorListing.GetValueOrDefault(l.Id),
+                favoritosPorListing.GetValueOrDefault(l.Id),
+                consultasPorListing.GetValueOrDefault(l.Id),
+                conversionesPorListing.GetValueOrDefault(l.Id)))
+            .ToList();
     }
 
     private async Task<ListingStatsDto> BuildStatsAsync(int listingId, string titulo)
