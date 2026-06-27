@@ -31,6 +31,8 @@ window.mapInterop = {
       this._searchMarker = null;
       this._dotNetRef = null;
       this._selectedId = null;
+      this._clusterHandlersBound = false;
+      this._geojsonData = null;
     }
 
     mapboxgl.accessToken = window.MAPBOX_TOKEN;
