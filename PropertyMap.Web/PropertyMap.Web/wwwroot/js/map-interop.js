@@ -7,6 +7,9 @@ window.mapInterop = {
   _searchMarker: null,   // pin sobre la ubicación buscada
   _dotNetRef: null,
   _selectedId: null,
+  _geojsonData: null,              // último FeatureCollection cargado (para reconstruir tras cambio de estilo)
+  _clusterHandlersBound: false,
+  _highlightedClusterFeatureId: null,
 
   // ── Inicializar el mapa ────────────────────────────────────────────────────
   initMap(elementId, lat, lng, zoom) {
@@ -188,6 +191,137 @@ window.mapInterop = {
     this._map.setStyle(this._resolveStyle(styleUrl));
     this._map.once('styledata', () => {
       currentMarkers.forEach(({ marker }) => marker.addTo(this._map));
+      this._ensureClusterLayers();
+      if (this._geojsonData && this._map.getSource('listings-source')) {
+        this._map.getSource('listings-source').setData(this._geojsonData);
+      }
+    });
+  },
+
+  // ── Clustering: helpers ─────────────────────────────────────────────────────
+
+  // Construye el FeatureCollection GeoJSON a partir de los listings.
+  _buildGeoJson(listings) {
+    return {
+      type: 'FeatureCollection',
+      features: listings.map(l => ({
+        type: 'Feature',
+        id: l.id,
+        properties: { id: l.id, operacion: l.operacion },
+        geometry: { type: 'Point', coordinates: [l.lng, l.lat] }
+      }))
+    };
+  },
+
+  // Crea la source + capas de cluster si todavía no existen en el estilo actual
+  // (necesario también después de un cambio de estilo, que las borra).
+  _ensureClusterLayers() {
+    if (!this._map.getSource('listings-source')) {
+      this._map.addSource('listings-source', {
+        type: 'geojson',
+        data: this._geojsonData ?? { type: 'FeatureCollection', features: [] },
+        cluster: true,
+        clusterRadius: 65,
+        clusterMaxZoom: 15
+      });
+    }
+
+    if (!this._map.getLayer('clusters')) {
+      this._map.addLayer({
+        id: 'clusters',
+        type: 'circle',
+        source: 'listings-source',
+        filter: ['has', 'point_count'],
+        paint: {
+          'circle-color': '#1a73e8',
+          'circle-radius': ['step', ['get', 'point_count'], 18, 10, 24, 50, 30],
+          'circle-stroke-color': '#ffffff',
+          'circle-stroke-width': ['case', ['boolean', ['feature-state', 'highlighted'], false], 4, 2]
+        }
+      });
+    }
+
+    if (!this._map.getLayer('cluster-count')) {
+      this._map.addLayer({
+        id: 'cluster-count',
+        type: 'symbol',
+        source: 'listings-source',
+        filter: ['has', 'point_count'],
+        layout: {
+          'text-field': ['get', 'point_count_abbreviated'],
+          'text-font': ['DIN Pro Medium', 'Arial Unicode MS Bold'],
+          'text-size': 13
+        },
+        paint: { 'text-color': '#ffffff' }
+      });
+    }
+
+    this._bindClusterHandlers();
+  },
+
+  // Listeners de click/hover sobre la capa de clusters y recálculo de pines
+  // individuales en cada pan/zoom. Se bindean una sola vez por instancia de mapa
+  // (los listeners de map.on persisten across setStyle, a diferencia de las capas).
+  _bindClusterHandlers() {
+    if (this._clusterHandlersBound) return;
+    this._clusterHandlersBound = true;
+
+    this._map.on('click', 'clusters', (e) => {
+      const features = this._map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
+      if (!features.length) return;
+      const clusterId = features[0].properties.cluster_id;
+      this._map.getSource('listings-source').getClusterExpansionZoom(clusterId, (err, zoom) => {
+        if (err) return;
+        this._map.flyTo({ center: features[0].geometry.coordinates, zoom });
+      });
+    });
+
+    this._map.on('mouseenter', 'clusters', () => { this._map.getCanvas().style.cursor = 'pointer'; });
+    this._map.on('mouseleave', 'clusters', () => { this._map.getCanvas().style.cursor = ''; });
+
+    this._map.on('sourcedata', (e) => {
+      if (e.sourceId === 'listings-source' && e.isSourceLoaded) {
+        this._refreshIndividualMarkers();
+      }
+    });
+  },
+
+  // Crea/actualiza los mapboxgl.Marker HTML solo para los puntos que NO están
+  // agrupados según Mapbox (mismo aspecto/eventos que el código preexistente).
+  _refreshIndividualMarkers() {
+    if (!this._map.getSource('listings-source')) return;
+    const features = this._map.querySourceFeatures('listings-source', {
+      filter: ['!', ['has', 'point_count']]
+    });
+
+    const visibleIds = new Set(features.map(f => f.properties.id));
+
+    this._markers.forEach(({ marker }, id) => {
+      if (!visibleIds.has(id)) { marker.remove(); this._markers.delete(id); }
+    });
+
+    features.forEach(f => {
+      const id = f.properties.id;
+      if (this._markers.has(id)) return;
+
+      const el = this._createHouseMarker(f.properties.operacion);
+
+      el.addEventListener('click', () => {
+        if (this._dotNetRef) this._dotNetRef.invokeMethodAsync('OnMarkerClick', [id]);
+      });
+      el.addEventListener('mouseenter', () => {
+        if (this._dotNetRef) this._dotNetRef.invokeMethodAsync('OnMarkerHover', id);
+      });
+      el.addEventListener('mouseleave', () => {
+        if (this._dotNetRef) this._dotNetRef.invokeMethodAsync('OnMarkerHover', -1);
+      });
+
+      const [lng, lat] = f.geometry.coordinates;
+      const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+        .setLngLat([lng, lat])
+        .addTo(this._map);
+
+      this._markers.set(id, { marker, data: f.properties });
     });
   },
 
@@ -195,32 +329,19 @@ window.mapInterop = {
   setMarkers(listings, dotNetRef) {
     if (!this._map) return;
     this._dotNetRef = dotNetRef;
-    this.clearMarkers();
+    this._geojsonData = this._buildGeoJson(listings);
 
-    listings.forEach(l => {
-      const el = this._createHouseMarker(l.operacion);
+    const apply = () => {
+      if (this._map.getSource('listings-source')) {
+        this._map.getSource('listings-source').setData(this._geojsonData);
+      } else {
+        this._ensureClusterLayers();
+      }
+      this._refreshIndividualMarkers();
+    };
 
-      el.addEventListener('click', () => {
-        if (this._dotNetRef)
-          this._dotNetRef.invokeMethodAsync('OnMarkerClick', [l.id]);
-      });
-
-      el.addEventListener('mouseenter', () => {
-        if (this._dotNetRef)
-          this._dotNetRef.invokeMethodAsync('OnMarkerHover', l.id);
-      });
-
-      el.addEventListener('mouseleave', () => {
-        if (this._dotNetRef)
-          this._dotNetRef.invokeMethodAsync('OnMarkerHover', -1);
-      });
-
-      const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
-        .setLngLat([l.lng, l.lat])
-        .addTo(this._map);
-
-      this._markers.set(l.id, { marker, data: l });
-    });
+    if (this._map.isStyleLoaded()) apply();
+    else this._map.once('load', apply);
   },
 
   // ── Resaltar marker seleccionado (click) ──────────────────────────────────
