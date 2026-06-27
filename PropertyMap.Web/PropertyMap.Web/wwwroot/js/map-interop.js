@@ -10,6 +10,7 @@ window.mapInterop = {
   _geojsonData: null,              // último FeatureCollection cargado (para reconstruir tras cambio de estilo)
   _clusterHandlersBound: false,
   _highlightedClusterFeatureId: null,
+  _highlightSeq: 0,
 
   // ── Inicializar el mapa ────────────────────────────────────────────────────
   initMap(elementId, lat, lng, zoom) {
@@ -358,13 +359,16 @@ window.mapInterop = {
   // Resalta visualmente el círculo del cluster que contiene un listing agrupado.
   _highlightCluster(id) {
     this._clearClusterHighlight();
+    if (!this._map) return;
     if (!this._map.getSource('listings-source')) return;
 
+    const seq = ++this._highlightSeq;
     const source = this._map.getSource('listings-source');
     const clusters = this._map.querySourceFeatures('listings-source', { filter: ['has', 'point_count'] });
 
     clusters.forEach(cluster => {
       source.getClusterLeaves(cluster.properties.cluster_id, cluster.properties.point_count, 0, (err, leaves) => {
+        if (seq !== this._highlightSeq) return; // callback obsoleto (hubo un highlight/clear más nuevo), descartar
         if (err || !leaves) return;
         if (leaves.some(leaf => leaf.properties.id === id)) {
           this._highlightedClusterFeatureId = cluster.id;
@@ -375,7 +379,8 @@ window.mapInterop = {
   },
 
   _clearClusterHighlight() {
-    if (this._highlightedClusterFeatureId != null && this._map.getSource('listings-source')) {
+    this._highlightSeq++;
+    if (this._highlightedClusterFeatureId != null && this._map && this._map.getSource('listings-source')) {
       this._map.setFeatureState({ source: 'listings-source', id: this._highlightedClusterFeatureId }, { highlighted: false });
     }
     this._highlightedClusterFeatureId = null;
