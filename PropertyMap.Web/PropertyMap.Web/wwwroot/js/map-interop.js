@@ -355,23 +355,64 @@ window.mapInterop = {
     });
   },
 
+  // Resalta visualmente el círculo del cluster que contiene un listing agrupado.
+  _highlightCluster(id) {
+    this._clearClusterHighlight();
+    if (!this._map.getSource('listings-source')) return;
+
+    const source = this._map.getSource('listings-source');
+    const clusters = this._map.querySourceFeatures('listings-source', { filter: ['has', 'point_count'] });
+
+    clusters.forEach(cluster => {
+      source.getClusterLeaves(cluster.properties.cluster_id, cluster.properties.point_count, 0, (err, leaves) => {
+        if (err || !leaves) return;
+        if (leaves.some(leaf => leaf.properties.id === id)) {
+          this._highlightedClusterFeatureId = cluster.id;
+          this._map.setFeatureState({ source: 'listings-source', id: cluster.id }, { highlighted: true });
+        }
+      });
+    });
+  },
+
+  _clearClusterHighlight() {
+    if (this._highlightedClusterFeatureId != null && this._map.getSource('listings-source')) {
+      this._map.setFeatureState({ source: 'listings-source', id: this._highlightedClusterFeatureId }, { highlighted: false });
+    }
+    this._highlightedClusterFeatureId = null;
+  },
+
   // ── Highlight marker desde hover de card ──────────────────────────────────
   highlightMarker(id) {
-    this._markers.forEach(({ marker }, markerId) => {
-      const el = marker.getElement();
-      if (!el) return;
-      if (id === null || id === undefined) {
-        el.classList.remove('hovered');
-      } else {
-        el.classList.toggle('hovered', markerId === id);
-      }
-    });
+    if (id === null || id === undefined) {
+      this._markers.forEach(({ marker }) => {
+        const el = marker.getElement();
+        if (el) el.classList.remove('hovered');
+      });
+      this._clearClusterHighlight();
+      return;
+    }
+
+    if (this._markers.has(id)) {
+      this._markers.forEach(({ marker }, markerId) => {
+        const el = marker.getElement();
+        if (el) el.classList.toggle('hovered', markerId === id);
+      });
+      this._clearClusterHighlight();
+      return;
+    }
+
+    this._highlightCluster(id);
   },
 
   // ── Limpiar todos los markers ──────────────────────────────────────────────
   clearMarkers() {
     this._markers.forEach(({ marker }) => marker.remove());
     this._markers.clear();
+    this._geojsonData = { type: 'FeatureCollection', features: [] };
+    if (this._map && this._map.getSource('listings-source')) {
+      this._map.getSource('listings-source').setData(this._geojsonData);
+    }
+    this._clearClusterHighlight();
   },
 
   // ── Resize handle drag ────────────────────────────────────────────────────
