@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using PropertyMap.Core.Interfaces;
@@ -35,6 +36,15 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
                 d => d.ServiceType == typeof(IEmailService));
             if (emailDescriptor != null) services.Remove(emailDescriptor);
             services.AddScoped<IEmailService, NoOpEmailService>();
+        });
+
+        builder.ConfigureAppConfiguration((_, config) =>
+        {
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["RateLimiting:Enabled"] = "false",
+                ["JwtSettings:Secret"] = "test-secret-key-for-integration-tests-only-min32chars!"
+            });
         });
 
         builder.UseEnvironment("Testing");
@@ -124,6 +134,36 @@ public static class TestAuthHelper
         // No Publisher role — plain user
         var loginResp = await client.PostAsJsonAsync("/api/auth/login",
             new PropertyMap.Core.DTOs.Auth.LoginRequest(email, "Test123!"));
+        var auth = await loginResp.Content.ReadFromJsonAsync<PropertyMap.Core.DTOs.Auth.AuthResponse>();
+
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", auth!.AccessToken);
+
+        return (client, user.Id);
+    }
+
+    public static async Task<(HttpClient client, string userId)> CreateAuthenticatedAdminAsync(
+        TestWebApplicationFactory factory)
+    {
+        var client = factory.CreateClient();
+        var email = $"admin_{Guid.NewGuid()}@test.com";
+
+        using var scope = factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<PropertyMap.Core.Entities.ApplicationUser>>();
+        var user = new PropertyMap.Core.Entities.ApplicationUser
+        {
+            UserName = email, Email = email,
+            Nombre = "Admin", Apellido = "Test", EmailConfirmed = true,
+            Estado = PropertyMap.Core.Enums.EstadoUsuario.Activo
+        };
+        await userManager.CreateAsync(user, "Admin123!");
+
+        // Asignar rol Admin
+        await userManager.AddToRoleAsync(user, "Admin");
+
+        // Login
+        var loginResp = await client.PostAsJsonAsync("/api/auth/login",
+            new PropertyMap.Core.DTOs.Auth.LoginRequest(email, "Admin123!"));
         var auth = await loginResp.Content.ReadFromJsonAsync<PropertyMap.Core.DTOs.Auth.AuthResponse>();
 
         client.DefaultRequestHeaders.Authorization =
