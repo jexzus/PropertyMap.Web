@@ -136,7 +136,7 @@ public class ListingsControllerTests : IClassFixture<TestWebApplicationFactory>
         var mapListings = await resp.Content.ReadFromJsonAsync<List<ListingMapDto>>();
         var found = mapListings!.First(l => l.Id == listingId);
         Assert.Equal(TipoOperacion.Venta.ToString(), found.Operacion);
-        Assert.NotEqual(0, found.Lat);
-        Assert.NotEqual(0, found.Lng);
+        Assert.Equal(-32.89, found.Lat, precision: 2);
+        Assert.Equal(-68.84, found.Lng, precision: 2);
     }
 }
