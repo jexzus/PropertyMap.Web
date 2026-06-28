@@ -1487,6 +1487,19 @@ html, body {
 }
 
 /* ── Publisher Dashboard ─────────────────────────────────────────── */
+.dashboard-alert {
+    padding: var(--space-3, 0.75rem) var(--space-4, 1rem);
+    border-radius: var(--radius-md, 8px);
+    margin-bottom: var(--space-4, 1rem);
+    font-size: 0.9375rem;
+}
+
+.dashboard-alert--error {
+    background: oklch(0.50 0.18 25 / 0.1);
+    border: 1px solid var(--color-error, oklch(0.50 0.18 25));
+    color: var(--color-error, oklch(0.50 0.18 25));
+}
+
 .dashboard-listing-card {
     display: flex;
     align-items: center;

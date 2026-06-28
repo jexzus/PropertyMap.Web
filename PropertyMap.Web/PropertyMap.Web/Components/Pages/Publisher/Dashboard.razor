@@ -25,6 +25,13 @@
                     Mis propiedades
                 </h1>
 
+                @if (destacadoError is not null)
+                {
+                    <div class="dashboard-alert dashboard-alert--error" role="alert">
+                        @destacadoError
+                    </div>
+                }
+
                 @if (loading)
                 {
                     <p style="color:var(--color-text-muted)">Cargando...</p>
@@ -108,6 +115,7 @@
     private List<PropertyMap.Core.DTOs.Stats.ListingStatsDto> stats = [];
     private bool loading = true;
     private bool sessionRestored;
+    private string? destacadoError;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -144,7 +152,8 @@
 
     private async Task ToggleDestacadoAsync(int listingId)
     {
-        await PropertyApi.ToggleDestacadoAsync(listingId);
+        var result = await PropertyApi.ToggleDestacadoAsync(listingId);
+        destacadoError = result.Success ? null : result.ErrorMessage ?? "No se pudo actualizar el destacado.";
         await LoadListings();
     }
 

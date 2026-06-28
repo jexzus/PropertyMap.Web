@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using PropertyMap.Core.DTOs.Properties;
 using PropertyMap.Core.DTOs.Publisher;
 using PropertyMap.Core.Enums;
@@ -9,6 +10,8 @@ namespace PropertyMap.Web.Services;
 
 public class PropertyApiService : IPropertyApiService
 {
+    private static readonly JsonSerializerOptions CaseInsensitiveJson = new() { PropertyNameCaseInsensitive = true };
+
     private readonly HttpClient _http;
     private readonly MemoryTokenStore _tokenStore;
 
@@ -80,17 +83,21 @@ public class PropertyApiService : IPropertyApiService
         return created!.Id;
     }
 
-    public async Task<bool> ToggleDestacadoAsync(int listingId)
+    public async Task<ToggleDestacadoResult> ToggleDestacadoAsync(int listingId)
     {
         try
         {
             SetAuth();
             var resp = await _http.PatchAsync($"api/properties/{listingId}/destacar", null);
-            return resp.IsSuccessStatusCode;
+            if (resp.IsSuccessStatusCode) return new ToggleDestacadoResult(true, null);
+
+            var error = await resp.Content.ReadFromJsonAsync<ErrorMessageDto>(CaseInsensitiveJson);
+            return new ToggleDestacadoResult(false, error?.Message);
         }
-        catch { return false; }
+        catch { return new ToggleDestacadoResult(false, null); }
     }
 
     private record CreatedIdDto(int Id);
     private record UploadUrlsDto(List<string> Urls);
+    private record ErrorMessageDto(string? Message);
 }

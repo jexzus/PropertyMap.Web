@@ -57,6 +57,19 @@ public class PropertiesController : ControllerBase
         if (publisher == null)
             return BadRequest(new { message = "No tenés un perfil de publisher. Creá uno primero en /api/publisher/profile." });
 
+        var subscription = await _subscriptions.GetByUserIdAsync(userId);
+        int? maxPublicaciones = subscription is null ? 3 : subscription.Plan.MaxPublicaciones;
+
+        if (maxPublicaciones is not null)
+        {
+            var listingsByPublisher = await _listings.GetListingsByPublisherAsync(publisher.Id);
+            var publicacionesActuales = listingsByPublisher.Count(l =>
+                l.Estado == EstadoPublicacion.Publicada || l.Estado == EstadoPublicacion.PendienteAprobacion);
+
+            if (publicacionesActuales >= maxPublicaciones)
+                return BadRequest(new { message = $"Tu plan permite hasta {maxPublicaciones} publicaciones activas. Pausá una o mejorá tu plan en /planes." });
+        }
+
         var location = await _locations.FindByCoordinatesAsync(request.Lat, request.Lng)
                        ?? await _locations.AddAsync(new Location
                        {

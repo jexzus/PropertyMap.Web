@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using PropertyMap.Core.DTOs.Plans;
 using PropertyMap.Core.DTOs.Properties;
 using PropertyMap.Core.DTOs.Stats;
 using PropertyMap.Core.Enums;
@@ -51,6 +52,10 @@ public class StatsControllerTests : IClassFixture<TestWebApplicationFactory>
 
         var (userClient, _) = await TestAuthHelper.CreateAuthenticatedUserAsync(_factory);
         await userClient.PostAsJsonAsync($"/api/favorites/{created!.Id}", new { });
+
+        var plans = await (await pubClient.GetAsync("/api/plans")).Content.ReadFromJsonAsync<List<PlanDto>>();
+        var profesional = plans!.First(p => p.Slug == "profesional");
+        await pubClient.PostAsJsonAsync("/api/subscriptions", new SubscribeRequest(profesional.Id));
 
         var statsResp = await pubClient.GetAsync($"/api/stats/listings/{created.Id}");
         Assert.Equal(HttpStatusCode.OK, statsResp.StatusCode);
