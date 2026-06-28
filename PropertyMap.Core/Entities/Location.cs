@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace PropertyMap.Core.Entities;
 
 public class Location
@@ -9,5 +11,6 @@ public class Location
     public string Ciudad { get; set; } = "";
     public string Provincia { get; set; } = "";
     public string Pais { get; set; } = "Argentina";
+    [JsonIgnore]
     public ICollection<PropertyListing> Listings { get; set; } = [];
 }

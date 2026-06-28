@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using PropertyMap.Core.Enums;
 
 namespace PropertyMap.Core.Entities;
@@ -11,6 +12,7 @@ public class Publisher
     public string? LogoUrl { get; set; }
     public string? Telefono { get; set; }
     public string UserId { get; set; } = ""; // FK a AspNetUsers.Id
+    [JsonIgnore]
     public ICollection<PropertyListing> Listings { get; set; } = [];
     public ApplicationUser? User { get; set; }
     public ICollection<AgentRating> Ratings { get; set; } = [];
