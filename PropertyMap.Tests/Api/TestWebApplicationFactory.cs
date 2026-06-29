@@ -15,6 +15,18 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
 {
     private readonly string _dbName = $"TestDb_{Guid.NewGuid()}";
 
+    static TestWebApplicationFactory()
+    {
+        // appsettings.json now ships with an empty JwtSettings:Secret (Task 5 of the
+        // Phase 9.3 security plan removes the hardcoded secret from source control).
+        // WebApplicationFactory's ConfigureAppConfiguration InMemory override only wins
+        // for keys absent from appsettings.json, so it can't beat the now-present empty
+        // string. An environment variable is added after appsettings.json in the config
+        // pipeline, so it reliably wins regardless of that ordering quirk.
+        Environment.SetEnvironmentVariable("JwtSettings__Secret",
+            "test-secret-key-for-integration-tests-only-min32chars!");
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureServices(services =>

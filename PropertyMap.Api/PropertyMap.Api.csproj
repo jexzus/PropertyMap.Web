@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
     <ProjectReference Include="..\PropertyMap.Core\PropertyMap.Core.csproj" />
@@ -20,6 +20,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>c8f558a2-a066-40ae-b09d-673cefbcd888</UserSecretsId>
   </PropertyGroup>
 
 </Project>

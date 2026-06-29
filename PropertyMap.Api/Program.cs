@@ -61,6 +61,12 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 .AddDefaultTokenProviders();
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+var jwtSecret = jwtSettings["Secret"];
+if (string.IsNullOrEmpty(jwtSecret))
+    throw new InvalidOperationException(
+        "JwtSettings:Secret no está configurado. En desarrollo, ejecutar desde PropertyMap.Api/: " +
+        "dotnet user-secrets set \"JwtSettings:Secret\" \"<valor-largo-aleatorio>\". " +
+        "En producción, configurar la variable de entorno JwtSettings__Secret.");
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -77,7 +83,7 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(jwtSettings["Secret"]!)),
+            Encoding.UTF8.GetBytes(jwtSecret)),
         ClockSkew = TimeSpan.Zero
     };
     options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
