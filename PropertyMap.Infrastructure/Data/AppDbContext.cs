@@ -192,5 +192,9 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
             .WithMany()
             .HasForeignKey(m => m.SenderId)
             .OnDelete(DeleteBehavior.NoAction);
+
+        // AuditLog — index for ordered queries (GetRecentAsync)
+        modelBuilder.Entity<AuditLog>()
+            .HasIndex(a => a.FechaAccion);
     }
 }
