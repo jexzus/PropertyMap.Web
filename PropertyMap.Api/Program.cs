@@ -1,6 +1,8 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -129,7 +131,31 @@ builder.WebHost.ConfigureKestrel(options =>
     options.Limits.MaxRequestBodySize = 50 * 1024 * 1024;
 });
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                Window = TimeSpan.FromMinutes(1),
+                PermitLimit = 100
+            }));
+
+    options.AddFixedWindowLimiter("auth", opt =>
+    {
+        opt.Window = TimeSpan.FromMinutes(15);
+        opt.PermitLimit = 5;
+    });
+
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
+
 var app = builder.Build();
+
+// Read after Build() so test hosts can override this via ConfigureAppConfiguration
+// (builder.Configuration does not yet include those overrides before Build()).
+var rateLimitingEnabled = app.Configuration.GetValue("RateLimiting:Enabled", true);
 
 if (app.Environment.IsDevelopment())
 {
@@ -141,6 +167,10 @@ app.UseHttpsRedirection();
 app.UseCors("BlazorClient");
 app.UseAuthentication();
 app.UseAuthorization();
+if (rateLimitingEnabled)
+{
+    app.UseRateLimiter();
+}
 app.UseStaticFiles();
 app.MapControllers();
 app.MapHub<NotificationsHub>("/hubs/notifications");
