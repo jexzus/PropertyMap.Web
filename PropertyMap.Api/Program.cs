@@ -142,11 +142,14 @@ builder.Services.AddRateLimiter(options =>
                 PermitLimit = 100
             }));
 
-    options.AddFixedWindowLimiter("auth", opt =>
-    {
-        opt.Window = TimeSpan.FromMinutes(15);
-        opt.PermitLimit = 5;
-    });
+    options.AddPolicy("auth", ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                Window = TimeSpan.FromMinutes(15),
+                PermitLimit = 5
+            }));
 
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
