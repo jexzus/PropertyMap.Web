@@ -1,6 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using PropertyMap.Core.DTOs.Auth;
+using PropertyMap.Core.Entities;
+using PropertyMap.Core.Enums;
 using Xunit;
 
 namespace PropertyMap.Tests.Api;
@@ -40,5 +44,69 @@ public class SecurityTests : IClassFixture<RateLimitTestWebApplicationFactory>
         }
 
         Assert.Equal(HttpStatusCode.TooManyRequests, lastResponse!.StatusCode);
+    }
+}
+
+public class LockoutTests : IClassFixture<TestWebApplicationFactory>
+{
+    private readonly TestWebApplicationFactory _factory;
+
+    public LockoutTests(TestWebApplicationFactory factory)
+    {
+        _factory = factory;
+    }
+
+    private async Task<string> CreateVerifiedUserAsync(HttpClient client)
+    {
+        var email = $"lockout_{Guid.NewGuid()}@test.com";
+        await client.PostAsJsonAsync("/api/auth/register",
+            new RegisterRequest("Lock", "Out", email, "Test123!", "Test123!"));
+
+        using var scope = _factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var user = await userManager.FindByEmailAsync(email);
+        user!.EmailConfirmed = true;
+        user.Estado = EstadoUsuario.Activo;
+        await userManager.UpdateAsync(user);
+
+        return email;
+    }
+
+    [Fact]
+    public async Task Login_ThreeFailedAttempts_ThenLocksOut()
+    {
+        var client = _factory.CreateClient();
+        var email = await CreateVerifiedUserAsync(client);
+
+        for (var i = 0; i < 3; i++)
+        {
+            var failResp = await client.PostAsJsonAsync("/api/auth/login",
+                new LoginRequest(email, "WrongPassword1!"));
+            Assert.Equal(HttpStatusCode.Unauthorized, failResp.StatusCode);
+        }
+
+        var lockedResp = await client.PostAsJsonAsync("/api/auth/login",
+            new LoginRequest(email, "Test123!"));
+
+        Assert.Equal(423, (int)lockedResp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Login_SuccessfulLogin_ResetsFailedCount()
+    {
+        var client = _factory.CreateClient();
+        var email = await CreateVerifiedUserAsync(client);
+
+        await client.PostAsJsonAsync("/api/auth/login", new LoginRequest(email, "WrongPassword1!"));
+        await client.PostAsJsonAsync("/api/auth/login", new LoginRequest(email, "WrongPassword1!"));
+
+        var successResp = await client.PostAsJsonAsync("/api/auth/login", new LoginRequest(email, "Test123!"));
+        Assert.Equal(HttpStatusCode.OK, successResp.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var user = await userManager.FindByEmailAsync(email);
+        var failedCount = await userManager.GetAccessFailedCountAsync(user!);
+        Assert.Equal(0, failedCount);
     }
 }

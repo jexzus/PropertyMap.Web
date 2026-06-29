@@ -88,8 +88,19 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login(LoginRequest request)
     {
         var user = await _userManager.FindByEmailAsync(request.Email);
-        if (user == null || !await _userManager.CheckPasswordAsync(user, request.Password))
+        if (user == null)
             return Unauthorized(new { message = "Credenciales incorrectas." });
+
+        if (await _userManager.IsLockedOutAsync(user))
+            return StatusCode(423, new { message = "Cuenta bloqueada temporalmente por intentos fallidos. Probá de nuevo en unos minutos." });
+
+        if (!await _userManager.CheckPasswordAsync(user, request.Password))
+        {
+            await _userManager.AccessFailedAsync(user);
+            return Unauthorized(new { message = "Credenciales incorrectas." });
+        }
+
+        await _userManager.ResetAccessFailedCountAsync(user);
 
         if (!user.EmailConfirmed)
             return Unauthorized(new { message = "Debés verificar tu email antes de iniciar sesión." });
