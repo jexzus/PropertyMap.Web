@@ -122,4 +122,26 @@ public class PropertiesControllerTests : IClassFixture<TestWebApplicationFactory
         var resp = await client.SendAsync(patchReq);
         Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
     }
+
+    [Fact]
+    public async Task Create_TituloExceedsMaxLength_Returns400()
+    {
+        var (pubClient, _) = await TestAuthHelper.CreateAuthenticatedPublisherAsync(_factory);
+        await TestAuthHelper.CreatePublisherProfileAsync(pubClient);
+
+        var tituloLargo = new string('A', 200); // excede el límite de 150
+        var request = new CreateListingRequest(
+            Operacion: TipoOperacion.Venta, TipoPropiedad: TipoPropiedad.Casa,
+            Titulo: tituloLargo, Descripcion: "Test",
+            Precio: 70000, Moneda: "USD",
+            DireccionTexto: "Calle Validacion 1", Ciudad: "Salta", Provincia: "Salta",
+            Lat: -24.78, Lng: -65.41,
+            Superficie: null, SuperficieCubierta: null, Ambientes: null,
+            Dormitorios: null, Banos: null, Antiguedad: null,
+            Cochera: false, Amenities: []);
+
+        var resp = await pubClient.PostAsJsonAsync("/api/properties", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
 }

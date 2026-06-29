@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using PropertyMap.Core.Enums;
 
 namespace PropertyMap.Core.DTOs.Reports;
@@ -5,5 +6,5 @@ namespace PropertyMap.Core.DTOs.Reports;
 public record CreateReportRequest(
     int PropertyListingId,
     MotivoReporte Motivo,
-    string? Descripcion
+    [StringLength(1000)] string? Descripcion
 );
