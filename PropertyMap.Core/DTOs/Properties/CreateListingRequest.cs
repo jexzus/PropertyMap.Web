@@ -9,7 +9,7 @@ public record CreateListingRequest(
     [StringLength(150)] string Titulo,
     [StringLength(5000)] string Descripcion,
     decimal Precio,
-    string Moneda,
+    [StringLength(10)] string Moneda,
     [StringLength(200)] string DireccionTexto,
     [StringLength(200)] string Ciudad,
     [StringLength(200)] string Provincia,

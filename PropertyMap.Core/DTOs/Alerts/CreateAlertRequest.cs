@@ -9,6 +9,6 @@ public record CreateAlertRequest(
     TipoPropiedad? TipoPropiedad,
     [StringLength(200)] string? Ciudad,
     decimal? PrecioMax,
-    string? Moneda,
+    [StringLength(10)] string? Moneda,
     int? DormitoriosMin
 );
