@@ -24,6 +24,26 @@ public class ListingsController : ControllerBase
         return Ok(listings);
     }
 
+    [HttpGet("search")]
+    public async Task<IActionResult> Search(
+        [FromQuery] string? q,
+        [FromQuery] string? operacion,
+        [FromQuery] string? tipoPropiedad,
+        [FromQuery] decimal? precioMax,
+        [FromQuery] int? dormitoriosMin,
+        [FromQuery] int? banosMin,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
+        var result = await _listings.SearchAsync(
+            q, operacion, tipoPropiedad, precioMax, dormitoriosMin, banosMin, page, pageSize);
+
+        return Ok(result);
+    }
+
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
