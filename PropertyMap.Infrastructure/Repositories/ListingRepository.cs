@@ -25,6 +25,9 @@ public class ListingRepository(AppDbContext ctx) : IListingRepository
         decimal? precioMax, int? dormitoriosMin, int? banosMin,
         int page, int pageSize)
     {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
         var query = ctx.PropertyListings
             .Where(l => l.Estado == EstadoPublicacion.Publicada)
             .Include(l => l.Location)
