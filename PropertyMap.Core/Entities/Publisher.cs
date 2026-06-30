@@ -7,10 +7,13 @@ public class Publisher
 {
     public int Id { get; set; }
     public string Nombre { get; set; } = "";
+    [JsonIgnore]
     public string Email { get; set; } = "";
     public TipoPublicador Tipo { get; set; }
     public string? LogoUrl { get; set; }
+    [JsonIgnore]
     public string? Telefono { get; set; }
+    [JsonIgnore]
     public string UserId { get; set; } = ""; // FK a AspNetUsers.Id
     [JsonIgnore]
     public ICollection<PropertyListing> Listings { get; set; } = [];

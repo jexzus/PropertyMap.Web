@@ -139,4 +139,21 @@ public class ListingsControllerTests : IClassFixture<TestWebApplicationFactory>
         Assert.Equal(-32.89, found.Lat, precision: 2);
         Assert.Equal(-68.84, found.Lng, precision: 2);
     }
+
+    [Fact]
+    public async Task GetAll_DoesNotExposePublisherSensitiveFields()
+    {
+        await CreateAndPublishListingAsync("Depto sin datos sensibles");
+
+        var anonClient = _factory.CreateClient();
+        var resp = await anonClient.GetAsync("/api/listings");
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+
+        var json = await resp.Content.ReadFromJsonAsync<System.Text.Json.JsonDocument>();
+        var publisherElement = json!.RootElement[0].GetProperty("publisher");
+
+        Assert.False(publisherElement.TryGetProperty("email", out _));
+        Assert.False(publisherElement.TryGetProperty("telefono", out _));
+        Assert.False(publisherElement.TryGetProperty("userId", out _));
+    }
 }
