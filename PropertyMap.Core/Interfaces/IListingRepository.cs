@@ -8,6 +8,10 @@ namespace PropertyMap.Core.Interfaces;
 public interface IListingRepository
 {
     Task<IEnumerable<PropertyListing>> GetActiveListingsAsync();
+    Task<PagedResultDto<PropertyListing>> SearchAsync(
+        string? q, string? operacion, string? tipoPropiedad,
+        decimal? precioMax, int? dormitoriosMin, int? banosMin,
+        int page, int pageSize);
     Task<IEnumerable<PropertyListing>> GetListingsByPublisherAsync(int publisherId);
     Task<IEnumerable<ListingMapDto>> GetActiveListingsForMapAsync();
     Task<PropertyListing?> GetByIdAsync(int id);

@@ -20,6 +20,49 @@ public class ListingRepository(AppDbContext ctx) : IListingRepository
             .ThenByDescending(l => l.FechaPublicacion)
             .ToListAsync();
 
+    public async Task<PagedResultDto<PropertyListing>> SearchAsync(
+        string? q, string? operacion, string? tipoPropiedad,
+        decimal? precioMax, int? dormitoriosMin, int? banosMin,
+        int page, int pageSize)
+    {
+        var query = ctx.PropertyListings
+            .Where(l => l.Estado == EstadoPublicacion.Publicada)
+            .Include(l => l.Location)
+            .Include(l => l.Publisher)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(q))
+            query = query.Where(l =>
+                l.Titulo.Contains(q) || l.Descripcion.Contains(q) ||
+                l.Location.Ciudad.Contains(q) || l.Location.DireccionTexto.Contains(q));
+
+        if (!string.IsNullOrWhiteSpace(operacion) && Enum.TryParse<TipoOperacion>(operacion, out var op))
+            query = query.Where(l => l.Operacion == op);
+
+        if (!string.IsNullOrWhiteSpace(tipoPropiedad) && Enum.TryParse<TipoPropiedad>(tipoPropiedad, out var tp))
+            query = query.Where(l => l.TipoPropiedad == tp);
+
+        if (precioMax.HasValue)
+            query = query.Where(l => l.Precio <= precioMax);
+
+        if (dormitoriosMin.HasValue)
+            query = query.Where(l => l.Dormitorios.HasValue && l.Dormitorios >= dormitoriosMin);
+
+        if (banosMin.HasValue)
+            query = query.Where(l => l.Banos.HasValue && l.Banos >= banosMin);
+
+        var totalCount = await query.CountAsync();
+
+        var items = await query
+            .OrderByDescending(l => l.Destacado)
+            .ThenByDescending(l => l.FechaPublicacion)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return new PagedResultDto<PropertyListing>(items, totalCount, page, pageSize);
+    }
+
     public async Task<IEnumerable<PropertyListing>> GetListingsByPublisherAsync(int publisherId) =>
         await ctx.PropertyListings
             .Where(l => l.PublisherId == publisherId)
