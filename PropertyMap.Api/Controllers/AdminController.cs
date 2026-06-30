@@ -1,7 +1,9 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PropertyMap.Core.DTOs.Admin;
 using PropertyMap.Core.DTOs.Reports;
+using PropertyMap.Core.Entities;
 using PropertyMap.Core.Enums;
 using PropertyMap.Core.Interfaces;
 
@@ -15,15 +17,18 @@ public class AdminController : ControllerBase
     private readonly IListingRepository _listings;
     private readonly IReportRepository _reports;
     private readonly IAlertMatchingService _alertMatching;
+    private readonly IAuditLogRepository _auditLog;
 
     public AdminController(
         IListingRepository listings,
         IReportRepository reports,
-        IAlertMatchingService alertMatching)
+        IAlertMatchingService alertMatching,
+        IAuditLogRepository auditLog)
     {
         _listings = listings;
         _reports = reports;
         _alertMatching = alertMatching;
+        _auditLog = auditLog;
     }
 
     [HttpGet("listings/pending")]
@@ -48,6 +53,16 @@ public class AdminController : ControllerBase
         listing.FechaActualizacion = DateTime.UtcNow;
 
         await _listings.UpdateAsync(listing);
+
+        await _auditLog.AddAsync(new AuditLog
+        {
+            UserId = User.FindFirstValue(ClaimTypes.NameIdentifier),
+            Accion = request.Aprobar ? "AprobarListing" : "RechazarListing",
+            Entidad = "PropertyListing",
+            EntidadId = id.ToString(),
+            Detalles = request.Aprobar ? null : request.MotivoRechazo,
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+        });
 
         if (request.Aprobar)
             await _alertMatching.NotifyMatchingAlertsAsync(listing);
@@ -80,6 +95,16 @@ public class AdminController : ControllerBase
         report.Estado = request.NuevoEstado;
         await _reports.UpdateAsync(report);
 
+        await _auditLog.AddAsync(new AuditLog
+        {
+            UserId = User.FindFirstValue(ClaimTypes.NameIdentifier),
+            Accion = request.NuevoEstado == EstadoReporte.Resuelto ? "ResolverReporte" : "RechazarReporte",
+            Entidad = "Report",
+            EntidadId = id.ToString(),
+            Detalles = null,
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+        });
+
         if (request.NuevoEstado == EstadoReporte.Resuelto)
         {
             var listing = await _listings.GetByIdAsync(report.PropertyListingId);
@@ -93,4 +118,8 @@ public class AdminController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpGet("audit-logs")]
+    public async Task<IActionResult> GetAuditLogs() =>
+        Ok(await _auditLog.GetRecentAsync());
 }
