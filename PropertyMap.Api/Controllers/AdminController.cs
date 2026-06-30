@@ -54,18 +54,25 @@ public class AdminController : ControllerBase
 
         await _listings.UpdateAsync(listing);
 
-        await _auditLog.AddAsync(new AuditLog
-        {
-            UserId = User.FindFirstValue(ClaimTypes.NameIdentifier),
-            Accion = request.Aprobar ? "AprobarListing" : "RechazarListing",
-            Entidad = "PropertyListing",
-            EntidadId = id.ToString(),
-            Detalles = request.Aprobar ? null : request.MotivoRechazo,
-            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-        });
-
         if (request.Aprobar)
             await _alertMatching.NotifyMatchingAlertsAsync(listing);
+
+        try
+        {
+            await _auditLog.AddAsync(new AuditLog
+            {
+                UserId = User.FindFirstValue(ClaimTypes.NameIdentifier),
+                Accion = request.Aprobar ? "AprobarListing" : "RechazarListing",
+                Entidad = "PropertyListing",
+                EntidadId = id.ToString(),
+                Detalles = request.Aprobar ? null : request.MotivoRechazo,
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error al registrar audit log para listing {id}: {ex.Message}");
+        }
 
         return Ok(new
         {
@@ -95,15 +102,22 @@ public class AdminController : ControllerBase
         report.Estado = request.NuevoEstado;
         await _reports.UpdateAsync(report);
 
-        await _auditLog.AddAsync(new AuditLog
+        try
         {
-            UserId = User.FindFirstValue(ClaimTypes.NameIdentifier),
-            Accion = request.NuevoEstado == EstadoReporte.Resuelto ? "ResolverReporte" : "RechazarReporte",
-            Entidad = "Report",
-            EntidadId = id.ToString(),
-            Detalles = null,
-            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-        });
+            await _auditLog.AddAsync(new AuditLog
+            {
+                UserId = User.FindFirstValue(ClaimTypes.NameIdentifier),
+                Accion = request.NuevoEstado == EstadoReporte.Resuelto ? "ResolverReporte" : "RechazarReporte",
+                Entidad = "Report",
+                EntidadId = id.ToString(),
+                Detalles = null,
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error al registrar audit log para reporte {id}: {ex.Message}");
+        }
 
         if (request.NuevoEstado == EstadoReporte.Resuelto)
         {
