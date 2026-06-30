@@ -37,6 +37,17 @@
         }
     </div>
 
+    @* ── Búsqueda por palabra clave ── *@
+    <div class="filter-keyword-wrap">
+        <input class="filter-keyword-input"
+               type="text"
+               placeholder="Buscar palabra clave..."
+               value="@Keyword"
+               @oninput="OnKeywordInput"
+               autocomplete="off"
+               aria-label="Buscar por palabra clave" />
+    </div>
+
     @* ── Operación ── *@
     <select class='filter-select @(!string.IsNullOrEmpty(Operacion) ? "has-value" : "")'
             value="@Operacion"
@@ -111,6 +122,8 @@
     [Parameter] public int? Dormitorios { get; set; }
     [Parameter] public int? Banos { get; set; }
     [Parameter] public string TipoProp { get; set; } = "";
+    [Parameter] public string Keyword { get; set; } = "";
+    [Parameter] public EventCallback<string> OnKeywordChanged { get; set; }
 
     [Parameter] public EventCallback<string> OnOperacionChanged { get; set; }
     [Parameter] public EventCallback<string> OnMaxPrecioChanged { get; set; }
@@ -122,10 +135,12 @@
     private string searchText = "";
     private List<SuggestionDto> suggestions = [];
     private CancellationTokenSource? debounceCts;
+    private CancellationTokenSource? keywordDebounceCts;
 
     private bool HasActiveFilters =>
         !string.IsNullOrEmpty(Operacion) || !string.IsNullOrEmpty(MaxPrecio) ||
-        Dormitorios.HasValue || Banos.HasValue || !string.IsNullOrEmpty(TipoProp);
+        Dormitorios.HasValue || Banos.HasValue || !string.IsNullOrEmpty(TipoProp) ||
+        !string.IsNullOrEmpty(Keyword);
 
     private async Task OnSearchInput(ChangeEventArgs e)
     {
@@ -174,6 +189,21 @@
     {
         searchText = "";
         suggestions = [];
+    }
+
+    private async Task OnKeywordInput(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString() ?? "";
+        keywordDebounceCts?.Cancel();
+        keywordDebounceCts = new CancellationTokenSource();
+        var token = keywordDebounceCts.Token;
+        try
+        {
+            await Task.Delay(250, token);
+            if (!token.IsCancellationRequested)
+                await OnKeywordChanged.InvokeAsync(value);
+        }
+        catch (OperationCanceledException) { /* tecla nueva: se cancela esta búsqueda */ }
     }
 
     public record SuggestionDto(string Label, double Lat, double Lng);

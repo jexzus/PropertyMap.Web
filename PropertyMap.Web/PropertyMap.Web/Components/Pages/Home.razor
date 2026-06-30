@@ -20,11 +20,13 @@
         Dormitorios="@filtroDormitorios"
         Banos="@filtroBanos"
         TipoProp="@filtroTipo"
-        OnOperacionChanged="v => { filtroOperacion = v; ApplyFilters(); }"
-        OnMaxPrecioChanged="v => { filtroMaxPrecioStr = v; ApplyFilters(); }"
-        OnDormitoriosChanged="v => { filtroDormitorios = v; ApplyFilters(); }"
-        OnBanosChanged="v => { filtroBanos = v; ApplyFilters(); }"
-        OnTipoChanged="v => { filtroTipo = v; ApplyFilters(); }"
+        Keyword="@filtroKeyword"
+        OnOperacionChanged="v => { filtroOperacion = v; _ = RunSearchAsync(resetPage: true); }"
+        OnMaxPrecioChanged="v => { filtroMaxPrecioStr = v; _ = RunSearchAsync(resetPage: true); }"
+        OnDormitoriosChanged="v => { filtroDormitorios = v; _ = RunSearchAsync(resetPage: true); }"
+        OnBanosChanged="v => { filtroBanos = v; _ = RunSearchAsync(resetPage: true); }"
+        OnTipoChanged="v => { filtroTipo = v; _ = RunSearchAsync(resetPage: true); }"
+        OnKeywordChanged="v => { filtroKeyword = v; _ = RunSearchAsync(resetPage: true); }"
         OnClearAll="ClearAllFilters" />
 
     @if (loadError is not null)
@@ -43,6 +45,19 @@
             OnListingSelected="SelectListing"
             OnListingHover="HoverListing"
             OnToggleCollapse="TogglePanel" />
+
+        @if (!isPanelCollapsed && _totalCount > 0)
+        {
+            <div class="pm-pagination">
+                <button class="btn-ghost" disabled="@(_currentPage <= 1)" @onclick="PrevPageAsync">
+                    ← Anterior
+                </button>
+                <span>Mostrando @(((_currentPage - 1) * PageSize) + 1)–@(Math.Min(_currentPage * PageSize, _totalCount)) de @_totalCount</span>
+                <button class="btn-ghost" disabled="@(_currentPage * PageSize >= _totalCount)" @onclick="NextPageAsync">
+                    Siguiente →
+                </button>
+            </div>
+        }
 
         @if (!isPanelCollapsed)
         {
@@ -72,7 +87,6 @@
 </div>
 
 @code {
-    private List<PropertyListing> allListings = [];
     private List<PropertyListing> filteredListings = [];
     private List<ListingMapDto> mapListings = [];
     private string? loadError;
@@ -83,6 +97,11 @@
     private decimal? filtroMaxPrecio;
     private int? filtroDormitorios;
     private int? filtroBanos;
+    private string filtroKeyword = "";
+
+    private const int PageSize = 20;
+    private int _currentPage = 1;
+    private int _totalCount;
 
     private int? selectedListingId;
     private int? hoveredListingId;
@@ -96,9 +115,8 @@
         try
         {
             isLoading = true;
-            allListings = (await ListingApi.GetActiveListingsAsync()).ToList();
             mapListings = (await ListingApi.GetActiveListingsForMapAsync()).ToList();
-            filteredListings = allListings;
+            await RunSearchAsync(resetPage: true);
         }
         catch (Exception ex) { loadError = ex.Message; }
         finally { isLoading = false; }
@@ -119,34 +137,52 @@
         showModal = false;
         if (!string.IsNullOrEmpty(criteria.Operacion)) filtroOperacion = criteria.Operacion;
         if (!string.IsNullOrEmpty(criteria.TipoProp))  filtroTipo = criteria.TipoProp;
-        ApplyFilters();
+        await RunSearchAsync(resetPage: true);
         if (criteria.Lat.HasValue && criteria.Lng.HasValue)
             await JS.InvokeVoidAsync("mapInterop.flyTo", criteria.Lat.Value, criteria.Lng.Value);
         else if (!string.IsNullOrWhiteSpace(criteria.Lugar))
             await JS.InvokeVoidAsync("mapInterop.geocodeAndFly", criteria.Lugar);
     }
 
-    private void ApplyFilters()
+    private async Task RunSearchAsync(bool resetPage)
     {
         filtroMaxPrecio = decimal.TryParse(filtroMaxPrecioStr, out var p) ? p : null;
+        if (resetPage) _currentPage = 1;
 
-        filteredListings = allListings
-            .Where(l => string.IsNullOrEmpty(filtroOperacion) || l.Operacion.ToString() == filtroOperacion)
-            .Where(l => string.IsNullOrEmpty(filtroTipo)      || l.TipoPropiedad.ToString() == filtroTipo)
-            .Where(l => !filtroMaxPrecio.HasValue              || l.Precio <= filtroMaxPrecio)
-            .Where(l => !filtroDormitorios.HasValue            || (l.Dormitorios.HasValue && l.Dormitorios >= filtroDormitorios))
-            .Where(l => !filtroBanos.HasValue                  || (l.Banos.HasValue && l.Banos >= filtroBanos))
-            .ToList();
+        try
+        {
+            isLoading = true;
+            var result = await ListingApi.SearchAsync(
+                q: string.IsNullOrWhiteSpace(filtroKeyword) ? null : filtroKeyword,
+                operacion: string.IsNullOrEmpty(filtroOperacion) ? null : filtroOperacion,
+                tipoPropiedad: string.IsNullOrEmpty(filtroTipo) ? null : filtroTipo,
+                precioMax: filtroMaxPrecio,
+                dormitoriosMin: filtroDormitorios,
+                banosMin: filtroBanos,
+                page: _currentPage,
+                pageSize: PageSize);
 
-        var filteredIds = filteredListings.Select(l => l.Id).ToHashSet();
-        mapListings = allListings
-            .Where(l => filteredIds.Contains(l.Id))
-            .Select(l => new ListingMapDto(
-                l.Id, l.Location.Latitud, l.Location.Longitud,
-                l.Titulo, l.Precio, l.Moneda,
-                l.TipoPropiedad.ToString(), l.Operacion.ToString(),
-                l.Images.OrderBy(img => img.Orden).FirstOrDefault()?.Url ?? ""
-            )).ToList();
+            filteredListings = result.Items;
+            _totalCount = result.TotalCount;
+        }
+        catch (Exception ex) { loadError = ex.Message; }
+        finally { isLoading = false; }
+
+        StateHasChanged();
+    }
+
+    private async Task PrevPageAsync()
+    {
+        if (_currentPage <= 1) return;
+        _currentPage--;
+        await RunSearchAsync(resetPage: false);
+    }
+
+    private async Task NextPageAsync()
+    {
+        if (_currentPage * PageSize >= _totalCount) return;
+        _currentPage++;
+        await RunSearchAsync(resetPage: false);
     }
 
     private void ClearAllFilters()
@@ -156,7 +192,8 @@
         filtroMaxPrecioStr = "";
         filtroDormitorios = null;
         filtroBanos = null;
-        ApplyFilters();
+        filtroKeyword = "";
+        _ = RunSearchAsync(resetPage: true);
     }
 
     private void SelectListing(int id) =>

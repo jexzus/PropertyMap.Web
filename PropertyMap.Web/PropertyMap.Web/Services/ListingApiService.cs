@@ -19,6 +19,24 @@ public class ListingApiService : IListingApiService
                ?? Enumerable.Empty<PropertyListing>();
     }
 
+    public async Task<PagedResultDto<PropertyListing>> SearchAsync(
+        string? q, string? operacion, string? tipoPropiedad,
+        decimal? precioMax, int? dormitoriosMin, int? banosMin,
+        int page, int pageSize)
+    {
+        var queryParts = new List<string> { $"page={page}", $"pageSize={pageSize}" };
+        if (!string.IsNullOrWhiteSpace(q)) queryParts.Add($"q={Uri.EscapeDataString(q)}");
+        if (!string.IsNullOrWhiteSpace(operacion)) queryParts.Add($"operacion={Uri.EscapeDataString(operacion)}");
+        if (!string.IsNullOrWhiteSpace(tipoPropiedad)) queryParts.Add($"tipoPropiedad={Uri.EscapeDataString(tipoPropiedad)}");
+        if (precioMax.HasValue) queryParts.Add($"precioMax={precioMax.Value}");
+        if (dormitoriosMin.HasValue) queryParts.Add($"dormitoriosMin={dormitoriosMin.Value}");
+        if (banosMin.HasValue) queryParts.Add($"banosMin={banosMin.Value}");
+
+        var url = $"/api/listings/search?{string.Join("&", queryParts)}";
+        return await _http.GetFromJsonAsync<PagedResultDto<PropertyListing>>(url)
+               ?? new PagedResultDto<PropertyListing>([], 0, page, pageSize);
+    }
+
     public async Task<IEnumerable<ListingMapDto>> GetActiveListingsForMapAsync()
     {
         return await _http.GetFromJsonAsync<IEnumerable<ListingMapDto>>("/api/listings/map")
