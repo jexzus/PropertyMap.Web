@@ -102,6 +102,17 @@ public class AdminController : ControllerBase
         report.Estado = request.NuevoEstado;
         await _reports.UpdateAsync(report);
 
+        if (request.NuevoEstado == EstadoReporte.Resuelto)
+        {
+            var listing = await _listings.GetByIdAsync(report.PropertyListingId);
+            if (listing is not null && listing.Estado == EstadoPublicacion.Publicada)
+            {
+                listing.Estado = EstadoPublicacion.Pausada;
+                listing.FechaActualizacion = DateTime.UtcNow;
+                await _listings.UpdateAsync(listing);
+            }
+        }
+
         try
         {
             await _auditLog.AddAsync(new AuditLog
@@ -117,17 +128,6 @@ public class AdminController : ControllerBase
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Error al registrar audit log para reporte {id}: {ex.Message}");
-        }
-
-        if (request.NuevoEstado == EstadoReporte.Resuelto)
-        {
-            var listing = await _listings.GetByIdAsync(report.PropertyListingId);
-            if (listing is not null && listing.Estado == EstadoPublicacion.Publicada)
-            {
-                listing.Estado = EstadoPublicacion.Pausada;
-                listing.FechaActualizacion = DateTime.UtcNow;
-                await _listings.UpdateAsync(listing);
-            }
         }
 
         return NoContent();
