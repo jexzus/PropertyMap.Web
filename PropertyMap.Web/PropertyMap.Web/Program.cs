@@ -59,6 +59,7 @@ builder.Services.AddScoped<IReportsApiService, ReportsApiService>();
 builder.Services.AddScoped<NotificationHubClient>();
 builder.Services.AddScoped<IPlansApiService, PlansApiService>();
 builder.Services.AddScoped<IStatsApiService, StatsApiService>();
+builder.Services.AddScoped<IAuditLogApiService, AuditLogApiService>();
 
 // Repos (aún necesarios mientras Program.cs corre DbSeeder)
 builder.Services.AddScoped<IListingRepository, ListingRepository>();

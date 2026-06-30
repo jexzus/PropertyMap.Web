@@ -1,0 +1,48 @@
+@page "/admin/auditoria"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Admin")]
+@using Microsoft.AspNetCore.Authorization
+@using PropertyMap.Core.DTOs.Admin
+@inject PropertyMap.Web.Services.IAuditLogApiService AuditLogApi
+
+<h1>Auditoría</h1>
+
+@if (_logs.Count == 0)
+{
+    <p>No hay registros de auditoría todavía.</p>
+}
+else
+{
+    <table class="pm-audit-table">
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Usuario</th>
+                <th>Acción</th>
+                <th>Entidad</th>
+                <th>Detalles</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var log in _logs)
+            {
+                <tr>
+                    <td>@log.FechaAccion.ToLocalTime().ToString("g")</td>
+                    <td>@(log.UserId ?? "—")</td>
+                    <td>@log.Accion</td>
+                    <td>@log.Entidad #@log.EntidadId</td>
+                    <td>@(log.Detalles ?? "—")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<AuditLogDto> _logs = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _logs = await AuditLogApi.GetRecentAsync();
+    }
+}
