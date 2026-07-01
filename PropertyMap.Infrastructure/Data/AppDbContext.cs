@@ -29,6 +29,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Plan> Plans => Set<Plan>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<PreRegistroToken> PreRegistroTokens => Set<PreRegistroToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

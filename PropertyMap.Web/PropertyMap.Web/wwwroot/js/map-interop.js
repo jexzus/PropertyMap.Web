@@ -11,6 +11,8 @@ window.mapInterop = {
   _clusterHandlersBound: false,
   _highlightedClusterFeatureId: null,
   _highlightSeq: 0,
+  _userLat: null,
+  _userLng: null,
 
   // ── Inicializar el mapa ────────────────────────────────────────────────────
   initMap(elementId, lat, lng, zoom) {
@@ -91,15 +93,39 @@ window.mapInterop = {
   },
 
   // Sugerencias de lugares (ciudades, barrios) mientras se escribe.
+  // Usa Photon (OpenStreetMap) en modo fallback: soporta proximidad por lat/lon y bbox.
   async geocodeSuggest(query) {
     if (!query || query.trim().length < 3) return [];
+
+    // Capturar ubicación del usuario la primera vez (para ordenar por cercanía).
+    if (this._userLat === null && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        pos => { this._userLat = pos.coords.latitude; this._userLng = pos.coords.longitude; },
+        ()  => { this._userLat = 0; this._userLng = 0; }
+      );
+    }
+
     try {
       if (window.MAP_FALLBACK || !window.MAPBOX_TOKEN) {
-        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&countrycodes=ar&accept-language=es`;
+        // Photon geocoder: sin token, soporta proximidad, más estable que Nominatim.
+        let url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=6&lang=es&bbox=-73.58,-55.05,-53.58,-21.78`;
+        if (this._userLat && this._userLng)
+          url += `&lat=${this._userLat}&lon=${this._userLng}`;
         const json = await (await fetch(url)).json();
-        return (json || []).map(r => ({ label: r.display_name, lat: parseFloat(r.lat), lng: parseFloat(r.lon) }));
+        return (json.features || []).slice(0, 5).map(f => {
+          const p = f.properties;
+          // Construir label: nombre + provincia/estado
+          const parts = [p.name, p.state || p.county].filter(Boolean);
+          return {
+            label: parts.join(', '),
+            lat: f.geometry.coordinates[1],
+            lng: f.geometry.coordinates[0]
+          };
+        });
       } else {
-        const url = `https://api.mapbox.com/search/geocode/v6/forward?q=${encodeURIComponent(query)}&access_token=${window.MAPBOX_TOKEN}&language=es&country=ar&limit=5`;
+        let url = `https://api.mapbox.com/search/geocode/v6/forward?q=${encodeURIComponent(query)}&access_token=${window.MAPBOX_TOKEN}&language=es&country=ar&limit=5`;
+        if (this._userLat && this._userLng)
+          url += `&proximity=${this._userLng},${this._userLat}`;
         const json = await (await fetch(url)).json();
         return (json.features || []).map(f => ({
           label: (f.properties && (f.properties.full_address || f.properties.name)) || '',
@@ -466,7 +492,23 @@ window.mapInterop = {
     if (typeof style === 'string' && style.includes('satellite')) {
       return this._satelliteStyle();
     }
-    return 'https://tiles.openfreemap.org/styles/liberty';
+    // OSM raster tiles: siempre disponibles, sin autenticación.
+    return this._osmRasterStyle();
+  },
+
+  _osmRasterStyle() {
+    return {
+      version: 8,
+      sources: {
+        osm: {
+          type: 'raster',
+          tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+          tileSize: 256,
+          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }
+      },
+      layers: [{ id: 'osm-tiles', type: 'raster', source: 'osm' }]
+    };
   },
 
   // Estilo satelital gratuito (imágenes de Esri World Imagery, sin token).

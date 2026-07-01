@@ -47,6 +47,33 @@ public class PublisherController : ControllerBase
         ));
     }
 
+    // Crea el perfil automáticamente con datos mínimos si no existe aún.
+    [HttpPost("profile/auto")]
+    public async Task<IActionResult> AutoCreateProfile()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null) return Unauthorized();
+
+        var existing = await _publishers.GetByUserIdAsync(userId);
+        if (existing != null) return Ok(new { message = "Ya tenés perfil." });
+
+        var publisher = new Publisher
+        {
+            Nombre = $"{((ApplicationUser)user).Nombre} {((ApplicationUser)user).Apellido}".Trim(),
+            Email = user.Email!,
+            Telefono = "",
+            Tipo = TipoPublicador.Particular,
+            UserId = userId
+        };
+        await _publishers.AddAsync(publisher);
+
+        if (!await _userManager.IsInRoleAsync(user, "Publisher"))
+            await _userManager.AddToRoleAsync(user, "Publisher");
+
+        return Ok(new { message = "Perfil creado." });
+    }
+
     [HttpPost("profile")]
     public async Task<IActionResult> CreateProfile(PublisherProfileRequest request)
     {

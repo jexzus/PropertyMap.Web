@@ -91,6 +91,7 @@ public class NoOpEmailService : IEmailService
     public Task SendNuevaRespuestaAsync(string toEmail, string userNombre, string propertyTitulo, string publisherNombre, string mensaje) => Task.CompletedTask;
     public Task SendAlertMatchAsync(string toEmail, string userNombre, string alertNombre, string propertyTitulo, int propertyId) => Task.CompletedTask;
     public Task SendReportConfirmationAsync(string toEmail, string userNombre, string propertyTitulo) => Task.CompletedTask;
+    public Task SendCodigoRecuperacionAsync(string toEmail, string toName, string codigo) => Task.CompletedTask;
 }
 
 public static class TestAuthHelper

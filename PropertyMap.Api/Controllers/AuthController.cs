@@ -1,11 +1,15 @@
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using PropertyMap.Core.DTOs.Auth;
 using PropertyMap.Core.Entities;
 using PropertyMap.Core.Enums;
 using PropertyMap.Core.Interfaces;
+using PropertyMap.Infrastructure.Data;
 
 namespace PropertyMap.Api.Controllers;
 
@@ -18,18 +22,26 @@ public class AuthController : ControllerBase
     private readonly ITokenService _tokenService;
     private readonly IEmailService _emailService;
     private readonly IConfiguration _config;
+    private readonly AppDbContext _db;
+    private readonly IPublisherRepository _publishers;
 
     public AuthController(
         UserManager<ApplicationUser> userManager,
         ITokenService tokenService,
         IEmailService emailService,
-        IConfiguration config)
+        IConfiguration config,
+        AppDbContext db,
+        IPublisherRepository publishers)
     {
         _userManager = userManager;
         _tokenService = tokenService;
         _emailService = emailService;
         _config = config;
+        _db = db;
+        _publishers = publishers;
     }
+
+    // ── Flujo legacy (usado por tests) ────────────────────────────────────────
 
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterRequest request)
@@ -40,7 +52,7 @@ public class AuthController : ControllerBase
         if (await _userManager.FindByEmailAsync(request.Email) != null)
             return Conflict(new { message = "El email ya está registrado." });
 
-        var token = GenerateVerificationCode();
+        var token = GenerateCode();
         var user = new ApplicationUser
         {
             Nombre = request.Nombre,
@@ -83,6 +95,165 @@ public class AuthController : ControllerBase
 
         return Ok(new { message = "Email verificado correctamente." });
     }
+
+    // ── Flujo nuevo: registro en 3 pasos ─────────────────────────────────────
+
+    [HttpPost("pre-registro")]
+    public async Task<IActionResult> PreRegistro(PreRegistroRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Email))
+            return BadRequest(new { message = "El email es requerido." });
+
+        if (await _userManager.FindByEmailAsync(request.Email) != null)
+            return Conflict(new { message = "El email ya está registrado." });
+
+        // Throttle: no reenviar si hay un token activo de menos de 30 segundos
+        var reciente = await _db.PreRegistroTokens
+            .Where(t => t.Email == request.Email && t.Tipo == "registro" &&
+                        !t.Usado && t.CreatedAt > DateTime.UtcNow.AddSeconds(-30))
+            .AnyAsync();
+        if (reciente)
+            return BadRequest(new { message = "Esperá unos segundos antes de reenviar el código." });
+
+        var codigo = GenerateCode();
+        _db.PreRegistroTokens.Add(new PreRegistroToken
+        {
+            Email = request.Email,
+            TokenHash = HashCode(codigo),
+            ExpiresAt = DateTime.UtcNow.AddMinutes(10),
+            Usado = false,
+            CreatedAt = DateTime.UtcNow,
+            Tipo = "registro"
+        });
+        await _db.SaveChangesAsync();
+
+        await _emailService.SendEmailVerificationAsync(request.Email, "", codigo);
+
+        return Ok(new { message = "Código enviado al email." });
+    }
+
+    [HttpPost("confirmar-pre-registro")]
+    public async Task<IActionResult> ConfirmarPreRegistro(ConfirmarPreRegistroRequest request)
+    {
+        var token = await _db.PreRegistroTokens
+            .Where(t => t.Email == request.Email && t.Tipo == "registro" && !t.Usado)
+            .OrderByDescending(t => t.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        if (token == null || token.ExpiresAt < DateTime.UtcNow ||
+            token.TokenHash != HashCode(request.Codigo))
+            return BadRequest(new { message = "Código inválido o expirado." });
+
+        token.Usado = true;
+        await _db.SaveChangesAsync();
+
+        return Ok(new { message = "Código verificado. Podés completar el registro." });
+    }
+
+    [HttpPost("registrar")]
+    public async Task<IActionResult> Registrar(RegistrarRequest request)
+    {
+        if (request.Password != request.ConfirmPassword)
+            return BadRequest(new { message = "Las contraseñas no coinciden." });
+
+        if (await _userManager.FindByEmailAsync(request.Email) != null)
+            return Conflict(new { message = "El email ya está registrado." });
+
+        var user = new ApplicationUser
+        {
+            Nombre = request.Nombre,
+            Apellido = request.Apellido,
+            Email = request.Email,
+            UserName = request.Email,
+            EmailConfirmed = true,
+            Estado = EstadoUsuario.Activo,
+            FechaRegistro = DateTime.UtcNow
+        };
+
+        var result = await _userManager.CreateAsync(user, request.Password);
+        if (!result.Succeeded)
+            return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
+
+        await _userManager.AddToRoleAsync(user, "User");
+        await _userManager.AddToRoleAsync(user, "Publisher");
+
+        await _publishers.AddAsync(new Publisher
+        {
+            UserId = user.Id,
+            Nombre = $"{request.Nombre} {request.Apellido}".Trim(),
+            Email = request.Email,
+            Telefono = "",
+            Tipo = TipoPublicador.Particular
+        });
+
+        await _emailService.SendWelcomeAsync(request.Email, request.Nombre);
+
+        return Ok(new { message = "Cuenta creada exitosamente." });
+    }
+
+    // ── Flujo nuevo: recuperar contraseña en 2 pasos ──────────────────────────
+
+    [HttpPost("solicitar-recuperacion")]
+    public async Task<IActionResult> SolicitarRecuperacion(SolicitarRecuperacionRequest request)
+    {
+        const string safeMsg = "Si el email está registrado, recibirás un código en breve.";
+
+        var user = await _userManager.FindByEmailAsync(request.Email);
+        if (user == null || !user.EmailConfirmed)
+            return Ok(new { message = safeMsg });
+
+        var reciente = await _db.PreRegistroTokens
+            .Where(t => t.Email == request.Email && t.Tipo == "recuperacion" &&
+                        !t.Usado && t.CreatedAt > DateTime.UtcNow.AddSeconds(-30))
+            .AnyAsync();
+        if (reciente)
+            return BadRequest(new { message = "Esperá unos segundos antes de reenviar el código." });
+
+        var codigo = GenerateCode();
+        _db.PreRegistroTokens.Add(new PreRegistroToken
+        {
+            Email = request.Email,
+            TokenHash = HashCode(codigo),
+            ExpiresAt = DateTime.UtcNow.AddMinutes(10),
+            Usado = false,
+            CreatedAt = DateTime.UtcNow,
+            Tipo = "recuperacion"
+        });
+        await _db.SaveChangesAsync();
+
+        await _emailService.SendCodigoRecuperacionAsync(request.Email, user.Nombre, codigo);
+
+        return Ok(new { message = safeMsg });
+    }
+
+    [HttpPost("cambiar-contrasena")]
+    public async Task<IActionResult> CambiarContrasena(CambiarContrasenaRequest request)
+    {
+        var token = await _db.PreRegistroTokens
+            .Where(t => t.Email == request.Email && t.Tipo == "recuperacion" && !t.Usado)
+            .OrderByDescending(t => t.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        if (token == null || token.ExpiresAt < DateTime.UtcNow ||
+            token.TokenHash != HashCode(request.Codigo))
+            return BadRequest(new { message = "Código inválido o expirado." });
+
+        var user = await _userManager.FindByEmailAsync(request.Email);
+        if (user == null)
+            return BadRequest(new { message = "Usuario no encontrado." });
+
+        var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var result = await _userManager.ResetPasswordAsync(user, resetToken, request.NuevaContrasena);
+        if (!result.Succeeded)
+            return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
+
+        token.Usado = true;
+        await _db.SaveChangesAsync();
+
+        return Ok(new { message = "Contraseña actualizada correctamente." });
+    }
+
+    // ── Login / Refresh (sin cambios) ─────────────────────────────────────────
 
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginRequest request)
@@ -162,49 +333,14 @@ public class AuthController : ControllerBase
         ));
     }
 
-    [HttpPost("forgot-password")]
-    public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest request)
-    {
-        const string safeMessage = "Si el email existe, recibirás instrucciones en breve.";
-        var user = await _userManager.FindByEmailAsync(request.Email);
-        if (user == null || !user.EmailConfirmed)
-            return Ok(new { message = safeMessage });
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
-        user.PasswordResetToken = _tokenService.GenerateRefreshToken();
-        user.PasswordResetExpiry = DateTime.UtcNow.AddHours(1);
-        await _userManager.UpdateAsync(user);
-
-        var resetUrl = _config["AppSettings:FrontendUrl"] ?? "https://propertymap.com.ar";
-        await _emailService.SendPasswordResetAsync(
-            user.Email!, user.Nombre, user.PasswordResetToken, $"{resetUrl}/reset-password");
-
-        return Ok(new { message = safeMessage });
-    }
-
-    [HttpPost("reset-password")]
-    public async Task<IActionResult> ResetPassword(ResetPasswordRequest request)
-    {
-        if (request.NewPassword != request.ConfirmNewPassword)
-            return BadRequest(new { message = "Las contraseñas no coinciden." });
-
-        var user = await _userManager.FindByEmailAsync(request.Email);
-        if (user == null ||
-            user.PasswordResetToken != request.Token ||
-            user.PasswordResetExpiry < DateTime.UtcNow)
-            return BadRequest(new { message = "Token inválido o expirado." });
-
-        var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
-        var result = await _userManager.ResetPasswordAsync(user, resetToken, request.NewPassword);
-        if (!result.Succeeded)
-            return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
-
-        user.PasswordResetToken = null;
-        user.PasswordResetExpiry = null;
-        await _userManager.UpdateAsync(user);
-
-        return Ok(new { message = "Contraseña restablecida correctamente." });
-    }
-
-    private static string GenerateVerificationCode() =>
+    private static string GenerateCode() =>
         Random.Shared.Next(100000, 999999).ToString();
+
+    private static string HashCode(string code)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(code));
+        return Convert.ToHexString(bytes);
+    }
 }

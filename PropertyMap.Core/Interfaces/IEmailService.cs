@@ -19,4 +19,5 @@ public interface IEmailService
         string alertNombre, string propertyTitulo, int propertyId);
 
     Task SendReportConfirmationAsync(string toEmail, string userNombre, string propertyTitulo);
+    Task SendCodigoRecuperacionAsync(string toEmail, string toName, string codigo);
 }

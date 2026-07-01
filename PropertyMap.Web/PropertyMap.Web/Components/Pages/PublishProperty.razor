@@ -270,10 +270,10 @@
 
                             <label class="field">
                                 <span class="field-label">Descripción</span>
-                                <textarea class="field-input" rows="6" maxlength="1500"
+                                <textarea class="field-input" rows="8" maxlength="3000"
                                           @bind="model.Descripcion" @bind:event="oninput"
                                           placeholder="Contá lo mejor de tu propiedad..."></textarea>
-                                <span class="char-counter">@(model.Descripcion?.Length ?? 0) / 1500</span>
+                                <span class="char-counter">@(model.Descripcion?.Length ?? 0) / 3000</span>
                             </label>
                         }
 
@@ -501,7 +501,7 @@
         try
         {
             await Task.Delay(250, token);
-            var results = await JS.InvokeAsync<GeoResult[]>("mapInterop.geocodeSuggest", ciudadTexto + ", Argentina");
+            var results = await JS.InvokeAsync<GeoResult[]>("mapInterop.geocodeSuggest", ciudadTexto);
             if (!token.IsCancellationRequested)
             {
                 ciudadSugerencias = results.Take(5).ToList();
@@ -683,6 +683,8 @@
         publishing = true;
         try
         {
+            await PropertyApi.AutoCreatePublisherProfileAsync();
+
             var request = new CreateListingRequest(
                 Operacion: model.Operacion,
                 TipoPropiedad: model.Tipo,
@@ -710,9 +712,23 @@
             {
                 listingId = await PropertyApi.CreateListingAsync(request);
             }
+            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                await AuthService.LogoutAsync();
+                Nav.NavigateTo("/Account/Login?returnUrl=/publicar");
+                return;
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                ShowToast("Necesitás crear tu perfil de publisher antes de publicar.", "error");
+                publishing = false;
+                await Task.Delay(1500);
+                Nav.NavigateTo("/publisher/dashboard");
+                return;
+            }
             catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.BadRequest)
             {
-                ShowToast("Creá un perfil de publisher primero. Verificá tu cuenta.", "error");
+                ShowToast("Límite de publicaciones alcanzado. Mejorá tu plan.", "error");
                 publishing = false;
                 return;
             }

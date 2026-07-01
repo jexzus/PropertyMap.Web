@@ -49,7 +49,7 @@ public class PropertiesController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Publisher")]
+    [Authorize]
     public async Task<IActionResult> Create(CreateListingRequest request)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -98,7 +98,7 @@ public class PropertiesController : ControllerBase
             Antiguedad = request.Antiguedad,
             Cochera = request.Cochera,
             Amenities = request.Amenities,
-            Estado = EstadoPublicacion.PendienteAprobacion,
+            Estado = EstadoPublicacion.Publicada,
             FechaPublicacion = DateTime.UtcNow,
             FechaActualizacion = DateTime.UtcNow
         };

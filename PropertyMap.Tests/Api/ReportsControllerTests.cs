@@ -37,24 +37,7 @@ public class ReportsControllerTests : IClassFixture<TestWebApplicationFactory>
         var createResp = await pubClient.PostAsJsonAsync("/api/properties", listing);
         var created = await createResp.Content.ReadFromJsonAsync<CreatedIdDto>();
 
-        using var scope = _factory.Services.CreateScope();
-        var userManager = scope.ServiceProvider
-            .GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<PropertyMap.Core.Entities.ApplicationUser>>();
-        var adminEmail = $"admin_report_{Guid.NewGuid()}@test.com";
-        var adminUser = new PropertyMap.Core.Entities.ApplicationUser
-        {
-            UserName = adminEmail, Email = adminEmail,
-            Nombre = "Admin", Apellido = "Report", EmailConfirmed = true,
-            Estado = EstadoUsuario.Activo
-        };
-        await userManager.CreateAsync(adminUser, "Admin123!");
-        await userManager.AddToRoleAsync(adminUser, "Admin");
-        var adminClient = _factory.CreateClient();
-        var loginResp = await adminClient.PostAsJsonAsync("/api/auth/login",
-            new PropertyMap.Core.DTOs.Auth.LoginRequest(adminEmail, "Admin123!"));
-        var auth = await loginResp.Content.ReadFromJsonAsync<PropertyMap.Core.DTOs.Auth.AuthResponse>();
-        adminClient.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", auth!.AccessToken);
+        var (adminClient, _) = await TestAuthHelper.CreateAuthenticatedAdminAsync(_factory);
         await adminClient.PatchAsJsonAsync($"/api/admin/listings/{created!.id}/review",
             new { Aprobar = true, MotivoRechazo = (string?)null });
 

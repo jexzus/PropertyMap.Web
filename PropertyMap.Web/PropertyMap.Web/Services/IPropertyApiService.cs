@@ -5,6 +5,7 @@ namespace PropertyMap.Web.Services;
 
 public interface IPropertyApiService
 {
+    Task AutoCreatePublisherProfileAsync();
     Task<int> CreateListingAsync(CreateListingRequest request);
     Task<List<string>> UploadImagesAsync(int listingId,
         IEnumerable<(byte[] Data, string FileName, string ContentType)> files);

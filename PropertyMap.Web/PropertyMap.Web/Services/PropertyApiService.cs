@@ -28,6 +28,12 @@ public class PropertyApiService : IPropertyApiService
             : new AuthenticationHeaderValue("Bearer", _tokenStore.AccessToken);
     }
 
+    public async Task AutoCreatePublisherProfileAsync()
+    {
+        SetAuth();
+        try { await _http.PostAsync("api/publisher/profile/auto", null); } catch { }
+    }
+
     public async Task<int> CreateListingAsync(CreateListingRequest request)
     {
         SetAuth();

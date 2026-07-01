@@ -48,24 +48,7 @@ public class ViewTrackingTests : IClassFixture<TestWebApplicationFactory>
         var created = await createResp.Content.ReadFromJsonAsync<CreatedIdResponse>();
 
         // Publish via admin review
-        var adminClient = _factory.CreateClient();
-        var adminScope = _factory.Services.CreateScope();
-        var adminUserManager = adminScope.ServiceProvider
-            .GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<PropertyMap.Core.Entities.ApplicationUser>>();
-        var adminUser = new PropertyMap.Core.Entities.ApplicationUser
-        {
-            UserName = "admin@test.com", Email = "admin@test.com",
-            Nombre = "Admin", Apellido = "Test",
-            EmailConfirmed = true,
-            Estado = PropertyMap.Core.Enums.EstadoUsuario.Activo
-        };
-        await adminUserManager.CreateAsync(adminUser, "Admin123!");
-        await adminUserManager.AddToRoleAsync(adminUser, "Admin");
-        var adminLogin = await adminClient.PostAsJsonAsync("/api/auth/login",
-            new PropertyMap.Core.DTOs.Auth.LoginRequest("admin@test.com", "Admin123!"));
-        var adminAuth = await adminLogin.Content.ReadFromJsonAsync<PropertyMap.Core.DTOs.Auth.AuthResponse>();
-        adminClient.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminAuth!.AccessToken);
+        var (adminClient, _) = await TestAuthHelper.CreateAuthenticatedAdminAsync(_factory);
         await adminClient.PatchAsJsonAsync($"/api/admin/listings/{created!.Id}/review",
             new { Aprobar = true, MotivoRechazo = (string?)null });
 

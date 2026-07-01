@@ -145,6 +145,23 @@ public class EmailService : IEmailService
         await SendAsync(toEmail, userNombre, $"Nueva propiedad: {propertyTitulo}", html);
     }
 
+    public async Task SendCodigoRecuperacionAsync(string toEmail, string toName, string codigo)
+    {
+        var html = $"""
+            <!DOCTYPE html>
+            <html>
+            <body style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:24px">
+              <h2 style="color:#be123c">Recuperar contraseña</h2>
+              <p>Hola{(string.IsNullOrEmpty(toName) ? "" : $" <strong>{toName}</strong>")},</p>
+              <p>Tu código para restablecer la contraseña es:</p>
+              <div style="font-size:40px;font-weight:bold;letter-spacing:12px;color:#1a1a1a;padding:16px 0">{codigo}</div>
+              <p style="color:#666">El código expira en 10 minutos.</p>
+            </body>
+            </html>
+            """;
+        await SendAsync(toEmail, toName, "Recuperá tu contraseña en PropertyMap", html);
+    }
+
     public async Task SendReportConfirmationAsync(string toEmail, string userNombre, string propertyTitulo)
     {
         var html = $"""

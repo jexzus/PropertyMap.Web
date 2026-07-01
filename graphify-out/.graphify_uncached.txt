@@ -1,0 +1,13 @@
+C:\Agentes\PropertyMap\src\README.md
+C:\Agentes\PropertyMap\src\docs\superpowers\plans\2026-06-13-phase2-ui-implementation.md
+C:\Agentes\PropertyMap\src\docs\superpowers\plans\2026-06-19-phase3-foundation-api.md
+C:\Agentes\PropertyMap\src\docs\superpowers\plans\2026-06-22-phase4a-backend-api.md
+C:\Agentes\PropertyMap\src\docs\superpowers\plans\2026-06-22-phase4b-frontend.md
+C:\Agentes\PropertyMap\src\docs\superpowers\plans\2026-06-22-phase5ab-user-features.md
+C:\Agentes\PropertyMap\src\docs\superpowers\plans\2026-06-22-phase5c-consultas.md
+C:\Agentes\PropertyMap\src\docs\superpowers\plans\2026-06-23-phase6-reputacion.md
+C:\Agentes\PropertyMap\src\docs\superpowers\specs\2026-06-13-propertymap-phase2-design.md
+C:\Agentes\PropertyMap\src\docs\superpowers\specs\2026-06-19-propertymap-phase3plus-design.md
+C:\Agentes\PropertyMap\src\docs\superpowers\specs\2026-06-22-phase5ab-user-features-design.md
+C:\Agentes\PropertyMap\src\docs\superpowers\specs\2026-06-22-phase5c-consultas-design.md
+C:\Agentes\PropertyMap\src\docs\superpowers\specs\2026-06-23-phase6-reputacion-design.md

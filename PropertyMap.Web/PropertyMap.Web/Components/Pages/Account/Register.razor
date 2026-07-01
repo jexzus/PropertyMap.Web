@@ -2,7 +2,6 @@
 @rendermode InteractiveServer
 @inject IAuthService AuthService
 @inject NavigationManager Nav
-@using System.Web
 
 <PageTitle>Crear cuenta — PropertyMap</PageTitle>
 
@@ -11,12 +10,64 @@
         <a href="/" class="auth-logo">PropertyMap</a>
         <h1 class="auth-title">Crear cuenta</h1>
 
+        @* Indicador de paso *@
+        <div style="display:flex;gap:8px;margin-bottom:24px;align-items:center">
+            <StepDot Number="1" Active="@(paso >= 1)" />
+            <div style="flex:1;height:2px;background:@(paso >= 2 ? "var(--color-primary)" : "var(--color-border)")"></div>
+            <StepDot Number="2" Active="@(paso >= 2)" />
+            <div style="flex:1;height:2px;background:@(paso >= 3 ? "var(--color-primary)" : "var(--color-border)")"></div>
+            <StepDot Number="3" Active="@(paso >= 3)" />
+        </div>
+
         @if (error is not null)
         {
             <div class="auth-error">@error</div>
         }
 
-        <div class="field-row">
+        @* PASO 1: Email *@
+        @if (paso == 1)
+        {
+            <p style="color:var(--color-muted);font-size:var(--text-sm);margin-bottom:16px">
+                Ingresá tu email para comenzar. Te enviaremos un código de verificación.
+            </p>
+            <div class="field">
+                <label class="field-label" for="email">Email</label>
+                <input id="email" type="email" class="field-input"
+                       @bind="email" placeholder="tu@email.com" autocomplete="email" />
+            </div>
+            <button class="btn-primary auth-btn" @onclick="EnviarCodigo" disabled="@loading">
+                @(loading ? "Enviando..." : "Continuar")
+            </button>
+        }
+
+        @* PASO 2: Código *@
+        @if (paso == 2)
+        {
+            <p style="color:var(--color-muted);font-size:var(--text-sm);margin-bottom:16px">
+                Ingresá el código de 6 dígitos que enviamos a <strong>@email</strong>.
+            </p>
+            <div class="field">
+                <label class="field-label" for="codigo">Código de verificación</label>
+                <input id="codigo" type="text" class="field-input"
+                       @bind="codigo" placeholder="123456"
+                       maxlength="6" inputmode="numeric" autocomplete="one-time-code"
+                       style="font-size:24px;letter-spacing:8px;text-align:center" />
+            </div>
+            <button class="btn-primary auth-btn" @onclick="ConfirmarCodigo" disabled="@loading">
+                @(loading ? "Verificando..." : "Verificar código")
+            </button>
+            <p class="auth-footer">
+                ¿No llegó? <button class="link-btn" @onclick="ReenviarCodigo" disabled="@loading">Reenviar</button>
+            </p>
+        }
+
+        @* PASO 3: Datos personales *@
+        @if (paso == 3)
+        {
+            <p style="color:var(--color-muted);font-size:var(--text-sm);margin-bottom:16px">
+                Email verificado. Completá tus datos para terminar el registro.
+            </p>
+            <div class="field-row">
                 <div class="field">
                     <label class="field-label" for="nombre">Nombre</label>
                     <input id="nombre" type="text" class="field-input"
@@ -28,65 +79,93 @@
                            @bind="apellido" placeholder="Pérez" autocomplete="family-name" />
                 </div>
             </div>
-
-            <div class="field">
-                <label class="field-label" for="email">Email</label>
-                <input id="email" type="email" class="field-input"
-                       @bind="email" placeholder="tu@email.com" autocomplete="email" />
-            </div>
-
             <div class="field">
                 <label class="field-label" for="password">Contraseña</label>
                 <input id="password" type="password" class="field-input"
                        @bind="password" placeholder="Mín. 8 caracteres, 1 mayúscula, 1 número, 1 símbolo"
                        autocomplete="new-password" />
             </div>
-
             <div class="field">
                 <label class="field-label" for="confirm">Confirmar contraseña</label>
                 <input id="confirm" type="password" class="field-input"
                        @bind="confirm" placeholder="Repetí la contraseña"
                        autocomplete="new-password" />
             </div>
-
-            <button class="btn-primary auth-btn" @onclick="DoRegister" disabled="@loading">
-                @(loading ? "Registrando..." : "Crear cuenta")
+            <button class="btn-primary auth-btn" @onclick="Registrar" disabled="@loading">
+                @(loading ? "Creando cuenta..." : "Crear cuenta")
             </button>
+        }
 
-        <p class="auth-footer">
-            ¿Ya tenés cuenta? <a href="/Account/Login">Iniciá sesión</a>
-        </p>
+        @* ÉXITO *@
+        @if (paso == 4)
+        {
+            <div class="auth-success">
+                ✓ ¡Cuenta creada! Ya podés iniciar sesión.
+            </div>
+            <a href="/Account/Login" class="btn-primary auth-btn" style="text-align:center;display:block">
+                Ir al login
+            </a>
+        }
+
+        @if (paso < 4)
+        {
+            <p class="auth-footer">
+                ¿Ya tenés cuenta? <a href="/Account/Login">Iniciá sesión</a>
+            </p>
+        }
     </div>
 </div>
 
 @code {
+    private int paso = 1;
+    private string email = "";
+    private string codigo = "";
     private string nombre = "";
     private string apellido = "";
-    private string email = "";
     private string password = "";
     private string confirm = "";
     private string? error;
     private bool loading;
 
-    private async Task DoRegister()
+    private async Task EnviarCodigo()
+    {
+        if (string.IsNullOrWhiteSpace(email)) { error = "Ingresá tu email."; return; }
+        loading = true; error = null;
+        var (ok, err) = await AuthService.PreRegistroAsync(email.Trim());
+        loading = false;
+        if (ok) paso = 2;
+        else error = err;
+    }
+
+    private async Task ReenviarCodigo()
+    {
+        loading = true; error = null;
+        var (ok, err) = await AuthService.PreRegistroAsync(email.Trim());
+        loading = false;
+        if (!ok) error = err;
+    }
+
+    private async Task ConfirmarCodigo()
+    {
+        if (string.IsNullOrWhiteSpace(codigo)) { error = "Ingresá el código."; return; }
+        loading = true; error = null;
+        var (ok, err) = await AuthService.ConfirmarPreRegistroAsync(email.Trim(), codigo.Trim());
+        loading = false;
+        if (ok) paso = 3;
+        else error = err;
+    }
+
+    private async Task Registrar()
     {
         if (string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(apellido)
-            || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
-        {
-            error = "Completá todos los campos.";
-            return;
-        }
-        if (password != confirm)
-        {
-            error = "Las contraseñas no coinciden.";
-            return;
-        }
+            || string.IsNullOrWhiteSpace(password))
+        { error = "Completá todos los campos."; return; }
+        if (password != confirm) { error = "Las contraseñas no coinciden."; return; }
 
-        loading = true;
-        error = null;
-        var (ok, err) = await AuthService.RegisterAsync(nombre, apellido, email, password, confirm);
+        loading = true; error = null;
+        var (ok, err) = await AuthService.RegistrarAsync(email, nombre, apellido, password, confirm);
         loading = false;
-        if (ok) Nav.NavigateTo($"/Account/VerifyEmail?Email={HttpUtility.UrlEncode(email)}");
+        if (ok) paso = 4;
         else error = err;
     }
 }

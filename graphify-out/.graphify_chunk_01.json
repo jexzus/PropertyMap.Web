@@ -1,0 +1,926 @@
+{
+  "nodes": [
+    {
+      "id": "readme_propertymap_project",
+      "label": "PropertyMap Project",
+      "type": "concept",
+      "file_type": "document",
+      "source_file": "README.md",
+      "attributes": {
+        "description": "Blazor Web App (.NET 9) real estate platform with interactive map",
+        "stack": "Blazor Web App, .NET 9, SQL Server LocalDB, MapLibre/Mapbox GL JS",
+        "map_provider_default": "MapLibre + OpenFreeMap",
+        "map_provider_optional": "Mapbox"
+      }
+    },
+    {
+      "id": "readme_propertymap_solution_structure",
+      "label": "Solution Structure",
+      "type": "concept",
+      "file_type": "document",
+      "source_file": "README.md",
+      "attributes": {
+        "projects": ["PropertyMap.Core", "PropertyMap.Infrastructure", "PropertyMap.Api", "PropertyMap.Web", "PropertyMap.Web.Client", "PropertyMap.Tests"],
+        "rationale": "Separated into Core (domain), Infrastructure (data), Api (REST), Web (Blazor SSR), Web.Client (WASM), Tests to enforce clean architecture boundaries and testability"
+      }
+    },
+    {
+      "id": "plans_phase2_navbar_component",
+      "label": "Navbar.razor",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-13-phase2-ui-implementation.md",
+      "attributes": {
+        "description": "Top navigation bar with logo and auth buttons",
+        "location": "PropertyMap.Web/Components/Layout/Navbar.razor"
+      }
+    },
+    {
+      "id": "plans_phase2_filterbar_component",
+      "label": "FilterBar.razor",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-13-phase2-ui-implementation.md",
+      "attributes": {
+        "description": "Filter bar with geocoding via Mapbox Geocoding API"
+      }
+    },
+    {
+      "id": "plans_phase2_mapview_component",
+      "label": "MapView.razor",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-13-phase2-ui-implementation.md",
+      "attributes": {
+        "description": "Interactive map component with satellite/street toggle and bidirectional hover sync",
+        "markers": "SVG house icons colored by TipoOperacion (crimson/green/purple)"
+      }
+    },
+    {
+      "id": "plans_phase2_map_interop_js",
+      "label": "map-interop.js",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-13-phase2-ui-implementation.md",
+      "attributes": {
+        "description": "JS interop for MapLibre/Mapbox GL JS, geocodeAndFly via Mapbox Geocoding API"
+      }
+    },
+    {
+      "id": "specs_phase2_zillow_ui",
+      "label": "Zillow-style UI Design",
+      "type": "concept",
+      "file_type": "rationale",
+      "source_file": "specs/2026-06-13-propertymap-phase2-design.md",
+      "attributes": {
+        "description": "Zillow-inspired split-pane layout: listing cards left, map right",
+        "rationale": "Familiar real estate UX pattern proven to work; bidirectional hover card↔marker improves discoverability"
+      }
+    },
+    {
+      "id": "specs_phase2_search_modal",
+      "label": "SearchModal.razor",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "specs/2026-06-13-propertymap-phase2-design.md",
+      "attributes": {
+        "description": "Search modal with sessionStorage to prevent re-showing on each visit"
+      }
+    },
+    {
+      "id": "specs_phase2_card_hover_sync",
+      "label": "Card-Marker Hover Sync",
+      "type": "concept",
+      "file_type": "concept",
+      "source_file": "specs/2026-06-13-propertymap-phase2-design.md",
+      "attributes": {
+        "description": "Bidirectional synchronization: hovering a card highlights map marker and vice versa via JSInvokable callbacks",
+        "rationale": "Improves spatial UX — user can correlate listed property to its map position without clicking"
+      }
+    },
+    {
+      "id": "specs_phase3_domain_model",
+      "label": "Full Domain Model",
+      "type": "concept",
+      "file_type": "document",
+      "source_file": "specs/2026-06-19-propertymap-phase3plus-design.md",
+      "attributes": {
+        "entities": ["ApplicationUser", "Publisher", "PropertyListing", "PropertyImage", "PropertyView", "PropertyFavorite", "PropertyRating", "AgentRating", "Consulta", "ConsultaMensaje", "Notification", "Alert", "Plan", "Subscription"],
+        "enums": ["EstadoUsuario", "EstadoPublicacion", "TipoNotificacion", "MotivoReporte", "EstadoReporte", "EstadoSuscripcion"]
+      }
+    },
+    {
+      "id": "specs_phase3_separate_api_project",
+      "label": "Separate REST API Project",
+      "type": "concept",
+      "file_type": "rationale",
+      "source_file": "specs/2026-06-19-propertymap-phase3plus-design.md",
+      "attributes": {
+        "description": "PropertyMap.Api is a dedicated ASP.NET Core REST API separate from the Blazor project",
+        "rationale": "Enables independent scaling, mobile client support, and clean separation between SSR rendering concerns and API concerns"
+      }
+    },
+    {
+      "id": "specs_phase3_jwt_auth",
+      "label": "JWT Authentication",
+      "type": "concept",
+      "file_type": "concept",
+      "source_file": "specs/2026-06-19-propertymap-phase3plus-design.md",
+      "attributes": {
+        "access_token_ttl": "15 minutes",
+        "refresh_token_ttl": "7 days",
+        "refresh_token_rotation": true,
+        "storage": "ProtectedLocalStorage",
+        "rationale": "Short-lived access tokens minimize exposure; rotating refresh tokens prevent token theft reuse"
+      }
+    },
+    {
+      "id": "specs_phase3_blazor_auth_provider",
+      "label": "BlazorAuthStateProvider",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "specs/2026-06-19-propertymap-phase3plus-design.md",
+      "attributes": {
+        "description": "Custom AuthenticationStateProvider for Blazor SSR, reads from MemoryTokenStore",
+        "memory_token_store": "Scoped per circuit, holds access token in memory between renders"
+      }
+    },
+    {
+      "id": "specs_phase3_phase_roadmap",
+      "label": "Phase Roadmap 3-9",
+      "type": "concept",
+      "file_type": "document",
+      "source_file": "specs/2026-06-19-propertymap-phase3plus-design.md",
+      "attributes": {
+        "phases": {
+          "3": "Foundation API (JWT, base entities)",
+          "4": "Publisher CRUD (listings, images)",
+          "5a": "User Features (profile, avatars)",
+          "5b": "Favorites + View Tracking",
+          "5c": "Consultas (private messaging threads)",
+          "6": "Reputación (ratings + agent ranking)",
+          "7": "Inteligencia (AI features)",
+          "8": "Monetización (plans, subscriptions)",
+          "9": "Escala (caching, CDN, performance)"
+        }
+      }
+    },
+    {
+      "id": "plans_phase4a_properties_controller",
+      "label": "PropertiesController",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-22-phase4a-backend-api.md",
+      "attributes": {
+        "description": "REST controller for property listings CRUD",
+        "location": "PropertyMap.Api/Controllers/PropertiesController.cs"
+      }
+    },
+    {
+      "id": "plans_phase4a_publisher_controller",
+      "label": "PublisherController",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-22-phase4a-backend-api.md",
+      "attributes": {
+        "description": "REST controller for publisher profile management"
+      }
+    },
+    {
+      "id": "plans_phase4a_image_service",
+      "label": "ImageService",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-22-phase4a-backend-api.md",
+      "attributes": {
+        "description": "IImageService + ImageService for property photo upload and storage",
+        "save_avatar_method": "SaveAvatarAsync added in Phase 5A"
+      }
+    },
+    {
+      "id": "plans_phase4b_memory_token_store",
+      "label": "MemoryTokenStore",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-22-phase4b-frontend.md",
+      "attributes": {
+        "description": "Scoped service holding access token in memory per Blazor circuit",
+        "rationale": "Avoids repeated ProtectedLocalStorage reads on every render; token survives circuit lifetime but not page reload"
+      }
+    },
+    {
+      "id": "plans_phase4b_auth_service",
+      "label": "AuthService",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-22-phase4b-frontend.md",
+      "attributes": {
+        "description": "IAuthService / AuthService for login, register, refresh token operations in Blazor frontend"
+      }
+    },
+    {
+      "id": "plans_phase4b_property_api_service",
+      "label": "PropertyApiService",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-22-phase4b-frontend.md",
+      "attributes": {
+        "description": "IPropertyApiService / PropertyApiService — HTTP client wrapper for property endpoints",
+        "photo_buffering": "In-memory byte[] instead of disk save during wizard"
+      }
+    },
+    {
+      "id": "plans_phase5ab_user_controller",
+      "label": "UserController",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-22-phase5ab-user-features.md",
+      "attributes": {
+        "description": "GET/PUT profile, POST avatar endpoints for authenticated users",
+        "location": "PropertyMap.Api/Controllers/UserController.cs"
+      }
+    },
+    {
+      "id": "plans_phase5ab_favorites_controller",
+      "label": "FavoritesController",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-22-phase5ab-user-features.md",
+      "attributes": {
+        "description": "GET list, POST/DELETE toggle, GET status [AllowAnonymous] for favorites",
+        "anon_behavior": "Anonymous users see count but isFavorited always false"
+      }
+    },
+    {
+      "id": "plans_phase5ab_view_tracking",
+      "label": "ViewTrackingService",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-22-phase5ab-user-features.md",
+      "attributes": {
+        "description": "IViewTrackingService + ViewTrackingService with daily deduplication window",
+        "rationale": "Count unique daily views per user to avoid inflating view counts on repeated visits"
+      }
+    },
+    {
+      "id": "specs_phase5ab_favorite_button_anon",
+      "label": "FavoriteButton Anonymous Redirect",
+      "type": "concept",
+      "file_type": "rationale",
+      "source_file": "specs/2026-06-22-phase5ab-user-features-design.md",
+      "attributes": {
+        "description": "FavoriteButton.razor redirects anonymous users to login page on click",
+        "rationale": "Encourages registration without blocking browsing; isFavorited public endpoint means anon users can see aggregate counts"
+      }
+    },
+    {
+      "id": "plans_phase5c_consulta_entity",
+      "label": "Consulta Entity",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-22-phase5c-consultas.md",
+      "attributes": {
+        "description": "Private messaging thread between a user and a publisher for a specific property",
+        "unique_index": "(PropertyListingId, UserId)",
+        "fields": ["Id", "PropertyListingId", "UserId", "FechaCreacion", "FechaUltimoMensaje"]
+      }
+    },
+    {
+      "id": "plans_phase5c_consulta_mensaje_entity",
+      "label": "ConsultaMensaje Entity",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-22-phase5c-consultas.md",
+      "attributes": {
+        "description": "Individual message within a Consulta thread",
+        "fields": ["Id", "ConsultaId", "SenderId", "EsDelPublisher", "Mensaje", "FechaEnvio"],
+        "es_del_publisher_rationale": "Boolean flag enables bubble-side rendering without extra lookups"
+      }
+    },
+    {
+      "id": "plans_phase5c_consultas_controller",
+      "label": "ConsultasController",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-22-phase5c-consultas.md",
+      "attributes": {
+        "base_route": "api/consultas",
+        "auth": "Authorize at class level",
+        "endpoints": [
+          "POST /api/consultas",
+          "GET /api/consultas",
+          "GET /api/consultas/publisher",
+          "GET /api/consultas/{id}",
+          "POST /api/consultas/{id}/mensajes"
+        ]
+      }
+    },
+    {
+      "id": "plans_phase5c_consulta_repository",
+      "label": "ConsultaRepository",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-22-phase5c-consultas.md",
+      "attributes": {
+        "description": "IConsultaRepository + ConsultaRepository implementing GetOrCreateAsync, GetByIdAsync, GetByUserAsync, GetByPublisherAsync, AddMessageAsync"
+      }
+    },
+    {
+      "id": "plans_phase5c_email_service_extension",
+      "label": "IEmailService Extensions",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-22-phase5c-consultas.md",
+      "attributes": {
+        "new_methods": ["SendNuevaConsultaAsync", "SendNuevaRespuestaAsync"],
+        "error_handling": "try/catch swallowed — email failure does not break HTTP response"
+      }
+    },
+    {
+      "id": "specs_phase5c_one_thread_per_pair",
+      "label": "One Thread Per User-Property",
+      "type": "concept",
+      "file_type": "rationale",
+      "source_file": "specs/2026-06-22-phase5c-consultas-design.md",
+      "attributes": {
+        "description": "GetOrCreateAsync + unique DB index ensures a single thread per (user, property) pair",
+        "rationale": "Prevents fragmentation of conversation context; all messages about a property are in one place"
+      }
+    },
+    {
+      "id": "specs_phase5c_access_control",
+      "label": "Consulta Access Control",
+      "type": "concept",
+      "file_type": "rationale",
+      "source_file": "specs/2026-06-22-phase5c-consultas-design.md",
+      "attributes": {
+        "description": "Only thread owner and property publisher can view or write to a thread",
+        "publisher_identity": "Resolved via Publisher.UserId == currentUserId",
+        "rationale": "Privacy requirement — third parties cannot read private negotiations"
+      }
+    },
+    {
+      "id": "plans_phase6_property_rating_entity",
+      "label": "PropertyRating Entity",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-23-phase6-reputacion.md",
+      "attributes": {
+        "description": "Rating for a property (AlquilerTemporario only) by a user with an active Consulta",
+        "unique_index": "(UserId, PropertyListingId)",
+        "fields": ["Id", "PropertyListingId", "UserId", "PuntajeUbicacion", "PuntajeEstado", "PuntajePrecioCalidad", "Comentario", "FechaValoracion"]
+      }
+    },
+    {
+      "id": "plans_phase6_agent_rating_entity",
+      "label": "AgentRating Entity",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-23-phase6-reputacion.md",
+      "attributes": {
+        "description": "Rating for a publisher/agent by a user who has consulted at least one of their properties",
+        "unique_index": "(UserId, PublisherId)",
+        "fields": ["Id", "PublisherId", "UserId", "PuntajeAtencion", "PuntajeRapidez", "PuntajeTransparencia", "PuntajeProfesionalismo", "Comentario", "FechaValoracion"]
+      }
+    },
+    {
+      "id": "plans_phase6_ratings_controller",
+      "label": "RatingsController",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-23-phase6-reputacion.md",
+      "attributes": {
+        "base_route": "api/ratings",
+        "endpoints": [
+          "POST /api/ratings/property [Authorize]",
+          "GET /api/ratings/property/{listingId}/stats [Public]",
+          "POST /api/ratings/agent [Authorize]",
+          "GET /api/ratings/agent/{publisherId}/stats [Public]",
+          "GET /api/ratings/ranking [Public]"
+        ]
+      }
+    },
+    {
+      "id": "plans_phase6_ranking_formula",
+      "label": "Agent Ranking Formula",
+      "type": "concept",
+      "file_type": "concept",
+      "source_file": "plans/2026-06-23-phase6-reputacion.md",
+      "attributes": {
+        "formula": "RankingScore = 0.40*ratingScore + 0.30*responseScore + 0.20*operacionesScore + 0.10*antiguedadScore",
+        "weights": {
+          "rating": 0.40,
+          "response_time": 0.30,
+          "operations": 0.20,
+          "seniority": 0.10
+        },
+        "response_time_cap_hours": 72,
+        "operations_cap": 50,
+        "seniority_cap_years": 5,
+        "rationale": "Weighted formula balances quality of service (rating) with responsiveness, activity, and trust signals; on-the-fly calculation avoids denormalization"
+      }
+    },
+    {
+      "id": "specs_phase6_no_new_migration",
+      "label": "No New Migration for Phase 6",
+      "type": "concept",
+      "file_type": "rationale",
+      "source_file": "specs/2026-06-23-phase6-reputacion-design.md",
+      "attributes": {
+        "description": "PropertyRating and AgentRating entities already exist in DB with constraints — no migration needed",
+        "rationale": "Entities were pre-defined in Phase 3 domain model to avoid future migration complexity"
+      }
+    },
+    {
+      "id": "specs_phase6_upsert_pattern",
+      "label": "Upsert Rating Pattern",
+      "type": "concept",
+      "file_type": "rationale",
+      "source_file": "specs/2026-06-23-phase6-reputacion-design.md",
+      "attributes": {
+        "description": "AddOrUpdateAsync: update existing rating if found, insert new otherwise; unique index enforces one rating per user-entity",
+        "rationale": "Users can refine their opinion after more experience; upsert removes need for separate update endpoint"
+      }
+    },
+    {
+      "id": "specs_phase6_alquiler_temporario_restriction",
+      "label": "AlquilerTemporario Rating Restriction",
+      "type": "concept",
+      "file_type": "rationale",
+      "source_file": "specs/2026-06-23-phase6-reputacion-design.md",
+      "attributes": {
+        "description": "Only AlquilerTemporario properties can be rated; validated in controller via IListingRepository",
+        "rationale": "Temporary rentals have repeated tenancy creating natural rating context; other property types are one-time transactions"
+      }
+    },
+    {
+      "id": "specs_phase6_ranking_on_the_fly",
+      "label": "On-the-Fly Ranking Calculation",
+      "type": "concept",
+      "file_type": "rationale",
+      "source_file": "specs/2026-06-23-phase6-reputacion-design.md",
+      "attributes": {
+        "description": "RankingScore calculated in SQL query on each request; no denormalized RankingScore field in Publisher",
+        "rationale": "Avoids stale data and migration; acceptable performance for initial scale; can add caching later if needed"
+      }
+    },
+    {
+      "id": "plans_phase6_top_agentes_page",
+      "label": "TopAgentes.razor",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-23-phase6-reputacion.md",
+      "attributes": {
+        "route": "/top-agentes",
+        "description": "Public page showing ranked agents table with city filter",
+        "render_mode": "InteractiveServer",
+        "columns": ["Position", "Nombre", "Tipo", "Score", "Rating", "TiempoRespuesta", "Operaciones", "Antigüedad"]
+      }
+    },
+    {
+      "id": "plans_phase6_rating_stars_component",
+      "label": "RatingStars.razor",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-23-phase6-reputacion.md",
+      "attributes": {
+        "description": "Shared star rating component supporting read-only (with decimal fill) and interactive (hover+click) modes",
+        "parameters": ["Value (0-5 double)", "ReadOnly bool", "OnChange EventCallback<int>"]
+      }
+    },
+    {
+      "id": "plans_phase6_consulta_detail_dto_extension",
+      "label": "ConsultaDetailDto Extension",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-23-phase6-reputacion.md",
+      "attributes": {
+        "description": "ConsultaDetailDto extended with OperacionPropiedad and PublisherId fields needed for Phase 6 conditional rating forms",
+        "added_fields": ["OperacionPropiedad", "PublisherId"]
+      }
+    },
+    {
+      "id": "plans_phase4a_integration_tests",
+      "label": "Integration Tests",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-22-phase4a-backend-api.md",
+      "attributes": {
+        "description": "PropertyMap.Tests project with integration tests for API controllers using WebApplicationFactory",
+        "test_pattern": "TDD: stub → tests fail → full impl → tests pass"
+      }
+    },
+    {
+      "id": "plans_phase5c_consulta_thread_component",
+      "label": "ConsultaThread.razor",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-22-phase5c-consultas.md",
+      "attributes": {
+        "description": "Shared chat bubble component, aligns bubbles based on EsDelPublisher XOR EsPublisher parameter",
+        "parameters": ["Mensajes List<ConsultaMensajeDto>", "EsPublisher bool", "OnSend EventCallback<string>"]
+      }
+    },
+    {
+      "id": "plans_phase5ab_favorite_button_component",
+      "label": "FavoriteButton.razor",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-22-phase5ab-user-features.md",
+      "attributes": {
+        "description": "Shared component for toggling favorites; redirects anon users to login"
+      }
+    },
+    {
+      "id": "plans_phase6_property_rating_form",
+      "label": "PropertyRatingForm.razor",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-23-phase6-reputacion.md",
+      "attributes": {
+        "description": "Form with 3 RatingStars criteria (Ubicación, Estado, Precio/Calidad) + optional comment",
+        "parameters": ["ListingId int", "Stats PropertyRatingStatsDto?"]
+      }
+    },
+    {
+      "id": "plans_phase6_agent_rating_form",
+      "label": "AgentRatingForm.razor",
+      "type": "concept",
+      "file_type": "code",
+      "source_file": "plans/2026-06-23-phase6-reputacion.md",
+      "attributes": {
+        "description": "Form with 4 RatingStars criteria (Atención, Rapidez, Transparencia, Profesionalismo) + optional comment",
+        "parameters": ["PublisherId int", "Stats AgentRatingStatsDto?"]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "readme_propertymap_solution_structure",
+      "target": "readme_propertymap_project",
+      "relation": "PART_OF",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "specs_phase3_separate_api_project",
+      "target": "readme_propertymap_solution_structure",
+      "relation": "DEFINES",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "specs_phase3_jwt_auth",
+      "target": "specs_phase3_blazor_auth_provider",
+      "relation": "USED_BY",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase4b_memory_token_store",
+      "target": "specs_phase3_blazor_auth_provider",
+      "relation": "IMPLEMENTS",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase4b_auth_service",
+      "target": "specs_phase3_jwt_auth",
+      "relation": "USES",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase2_navbar_component",
+      "target": "specs_phase2_zillow_ui",
+      "relation": "IMPLEMENTS",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase2_mapview_component",
+      "target": "specs_phase2_card_hover_sync",
+      "relation": "IMPLEMENTS",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase2_map_interop_js",
+      "target": "plans_phase2_mapview_component",
+      "relation": "USED_BY",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase4a_properties_controller",
+      "target": "readme_propertymap_solution_structure",
+      "relation": "PART_OF",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase4a_image_service",
+      "target": "plans_phase4a_properties_controller",
+      "relation": "USED_BY",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase4b_property_api_service",
+      "target": "plans_phase4a_properties_controller",
+      "relation": "CALLS",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase5ab_favorites_controller",
+      "target": "specs_phase5ab_favorite_button_anon",
+      "relation": "ENFORCES",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase5ab_favorite_button_component",
+      "target": "specs_phase5ab_favorite_button_anon",
+      "relation": "IMPLEMENTS",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase5ab_view_tracking",
+      "target": "plans_phase5ab_user_controller",
+      "relation": "USED_BY",
+      "confidence_score": 0.85,
+      "provenance": "INFERRED"
+    },
+    {
+      "source": "plans_phase5c_consulta_entity",
+      "target": "specs_phase5c_one_thread_per_pair",
+      "relation": "ENFORCES",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase5c_consulta_mensaje_entity",
+      "target": "plans_phase5c_consulta_entity",
+      "relation": "BELONGS_TO",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase5c_consultas_controller",
+      "target": "plans_phase5c_consulta_repository",
+      "relation": "USES",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase5c_consultas_controller",
+      "target": "specs_phase5c_access_control",
+      "relation": "ENFORCES",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase5c_email_service_extension",
+      "target": "plans_phase5c_consultas_controller",
+      "relation": "USED_BY",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase5c_consulta_thread_component",
+      "target": "plans_phase5c_consulta_entity",
+      "relation": "RENDERS",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase6_property_rating_entity",
+      "target": "specs_phase6_no_new_migration",
+      "relation": "RELATED_TO",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase6_agent_rating_entity",
+      "target": "specs_phase6_no_new_migration",
+      "relation": "RELATED_TO",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase6_ratings_controller",
+      "target": "specs_phase6_alquiler_temporario_restriction",
+      "relation": "ENFORCES",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase6_ratings_controller",
+      "target": "specs_phase6_upsert_pattern",
+      "relation": "USES",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase6_ranking_formula",
+      "target": "specs_phase6_ranking_on_the_fly",
+      "relation": "IMPLEMENTS",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase6_top_agentes_page",
+      "target": "plans_phase6_ranking_formula",
+      "relation": "USES",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase6_rating_stars_component",
+      "target": "plans_phase6_property_rating_form",
+      "relation": "USED_BY",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase6_rating_stars_component",
+      "target": "plans_phase6_agent_rating_form",
+      "relation": "USED_BY",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase6_property_rating_entity",
+      "target": "plans_phase5c_consulta_entity",
+      "relation": "DEPENDS_ON",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase6_agent_rating_entity",
+      "target": "plans_phase5c_consulta_entity",
+      "relation": "DEPENDS_ON",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase6_consulta_detail_dto_extension",
+      "target": "plans_phase5c_consulta_entity",
+      "relation": "EXTENDS",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase6_property_rating_form",
+      "target": "plans_phase6_consulta_detail_dto_extension",
+      "relation": "USES",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase6_agent_rating_form",
+      "target": "plans_phase6_consulta_detail_dto_extension",
+      "relation": "USES",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "specs_phase3_domain_model",
+      "target": "plans_phase6_property_rating_entity",
+      "relation": "DEFINES",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "specs_phase3_domain_model",
+      "target": "plans_phase6_agent_rating_entity",
+      "relation": "DEFINES",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "specs_phase3_domain_model",
+      "target": "plans_phase5c_consulta_entity",
+      "relation": "DEFINES",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "plans_phase4a_integration_tests",
+      "target": "plans_phase4a_properties_controller",
+      "relation": "TESTS",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "source": "specs_phase3_phase_roadmap",
+      "target": "specs_phase3_domain_model",
+      "relation": "GUIDES",
+      "confidence_score": 0.95,
+      "provenance": "INFERRED"
+    },
+    {
+      "source": "plans_phase2_filterbar_component",
+      "target": "plans_phase2_mapview_component",
+      "relation": "INTERACTS_WITH",
+      "confidence_score": 0.95,
+      "provenance": "INFERRED"
+    },
+    {
+      "source": "plans_phase4b_memory_token_store",
+      "target": "plans_phase4b_property_api_service",
+      "relation": "USED_BY",
+      "confidence_score": 0.95,
+      "provenance": "INFERRED"
+    },
+    {
+      "source": "plans_phase5ab_user_controller",
+      "target": "plans_phase4a_image_service",
+      "relation": "USES",
+      "confidence_score": 0.95,
+      "provenance": "INFERRED"
+    },
+    {
+      "source": "specs_phase5c_one_thread_per_pair",
+      "target": "specs_phase6_no_new_migration",
+      "relation": "semantically_similar_to",
+      "confidence_score": 0.75,
+      "provenance": "INFERRED"
+    },
+    {
+      "source": "specs_phase6_upsert_pattern",
+      "target": "specs_phase5c_one_thread_per_pair",
+      "relation": "semantically_similar_to",
+      "confidence_score": 0.70,
+      "provenance": "INFERRED"
+    },
+    {
+      "source": "plans_phase5c_consulta_thread_component",
+      "target": "specs_phase2_card_hover_sync",
+      "relation": "semantically_similar_to",
+      "confidence_score": 0.65,
+      "provenance": "INFERRED"
+    },
+    {
+      "source": "plans_phase5ab_view_tracking",
+      "target": "specs_phase6_ranking_on_the_fly",
+      "relation": "semantically_similar_to",
+      "confidence_score": 0.65,
+      "provenance": "INFERRED"
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "hyperedge_consulta_access_chain",
+      "label": "Consulta Access Control Chain",
+      "nodes": [
+        "plans_phase5c_consulta_entity",
+        "plans_phase5c_consulta_repository",
+        "plans_phase5c_consultas_controller",
+        "specs_phase5c_access_control"
+      ],
+      "relation": "ENFORCES_TOGETHER",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED",
+      "attributes": {
+        "description": "Repository checks access, controller enforces authorization; together they guarantee only owner and publisher can read/write a thread"
+      }
+    },
+    {
+      "id": "hyperedge_rating_eligibility_chain",
+      "label": "Rating Eligibility Verification Chain",
+      "nodes": [
+        "plans_phase5c_consulta_entity",
+        "plans_phase6_property_rating_entity",
+        "plans_phase6_agent_rating_entity",
+        "specs_phase6_alquiler_temporario_restriction"
+      ],
+      "relation": "CONSTRAINS_TOGETHER",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED",
+      "attributes": {
+        "description": "A user must have a Consulta to rate; property must be AlquilerTemporario; both constraints gate rating submission"
+      }
+    },
+    {
+      "id": "hyperedge_agent_ranking_computation",
+      "label": "Agent Ranking Computation Components",
+      "nodes": [
+        "plans_phase6_agent_rating_entity",
+        "plans_phase6_ranking_formula",
+        "specs_phase6_ranking_on_the_fly",
+        "plans_phase6_top_agentes_page"
+      ],
+      "relation": "COMPUTES_TOGETHER",
+      "confidence_score": 1.0,
+      "provenance": "EXTRACTED",
+      "attributes": {
+        "description": "AgentRating data feeds the formula, calculated on-the-fly per request, exposed on TopAgentes public page"
+      }
+    }
+  ],
+  "input_tokens": 18500,
+  "output_tokens": 3200
+}

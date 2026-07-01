@@ -70,6 +70,86 @@ public class AuthService : IAuthService
         }
     }
 
+    // ── Nuevo flujo ───────────────────────────────────────────────────────────
+
+    public async Task<(bool Success, string? Error)> PreRegistroAsync(string email)
+    {
+        try
+        {
+            var resp = await _http.PostAsJsonAsync("api/auth/pre-registro", new { Email = email });
+            var body = await resp.Content.ReadAsStringAsync();
+            if (!resp.IsSuccessStatusCode) return (false, ExtraerMensaje(body));
+            return (true, null);
+        }
+        catch (Exception ex) { return (false, $"No se pudo conectar: {ex.Message}"); }
+    }
+
+    public async Task<(bool Success, string? Error)> ConfirmarPreRegistroAsync(string email, string codigo)
+    {
+        try
+        {
+            var resp = await _http.PostAsJsonAsync("api/auth/confirmar-pre-registro", new { Email = email, Codigo = codigo });
+            var body = await resp.Content.ReadAsStringAsync();
+            if (!resp.IsSuccessStatusCode) return (false, ExtraerMensaje(body));
+            return (true, null);
+        }
+        catch (Exception ex) { return (false, $"No se pudo conectar: {ex.Message}"); }
+    }
+
+    public async Task<(bool Success, string? Error)> RegistrarAsync(
+        string email, string nombre, string apellido, string password, string confirm)
+    {
+        try
+        {
+            var resp = await _http.PostAsJsonAsync("api/auth/registrar",
+                new { Email = email, Nombre = nombre, Apellido = apellido, Password = password, ConfirmPassword = confirm });
+            var body = await resp.Content.ReadAsStringAsync();
+            if (!resp.IsSuccessStatusCode) return (false, ExtraerMensaje(body));
+            return (true, null);
+        }
+        catch (Exception ex) { return (false, $"No se pudo conectar: {ex.Message}"); }
+    }
+
+    public async Task<(bool Success, string? Error)> SolicitarRecuperacionAsync(string email)
+    {
+        try
+        {
+            var resp = await _http.PostAsJsonAsync("api/auth/solicitar-recuperacion", new { Email = email });
+            var body = await resp.Content.ReadAsStringAsync();
+            if (!resp.IsSuccessStatusCode) return (false, ExtraerMensaje(body));
+            return (true, null);
+        }
+        catch (Exception ex) { return (false, $"No se pudo conectar: {ex.Message}"); }
+    }
+
+    public async Task<(bool Success, string? Error)> CambiarContrasenaAsync(
+        string email, string codigo, string nuevaContrasena)
+    {
+        try
+        {
+            var resp = await _http.PostAsJsonAsync("api/auth/cambiar-contrasena",
+                new { Email = email, Codigo = codigo, NuevaContrasena = nuevaContrasena });
+            var body = await resp.Content.ReadAsStringAsync();
+            if (!resp.IsSuccessStatusCode) return (false, ExtraerMensaje(body));
+            return (true, null);
+        }
+        catch (Exception ex) { return (false, $"No se pudo conectar: {ex.Message}"); }
+    }
+
+    private static string ExtraerMensaje(string body)
+    {
+        try
+        {
+            var doc = System.Text.Json.JsonDocument.Parse(body);
+            if (doc.RootElement.TryGetProperty("message", out var m)) return m.GetString() ?? "Error desconocido.";
+            if (doc.RootElement.TryGetProperty("errors", out var e)) return string.Join(" ", e.EnumerateArray().Select(x => x.GetString()));
+        }
+        catch { }
+        return string.IsNullOrWhiteSpace(body) ? "Error desconocido." : body;
+    }
+
+    // ── Flujo legacy ──────────────────────────────────────────────────────────
+
     public async Task<(bool Success, string? Error)> VerifyEmailAsync(string email, string token)
     {
         try
