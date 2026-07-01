@@ -1,6 +1,7 @@
 @using PropertyMap.Core.Entities
 
 <div class="listings-panel-wrapper @(IsCollapsed ? "collapsed" : "")" id="listings-panel">
+
     @if (!IsCollapsed)
     {
         <div class="panel-header">
@@ -61,6 +62,19 @@
                 }
             }
         </div>
+
+        @if (TotalCount > 0)
+        {
+            <div class="pm-pagination">
+                <button class="btn-ghost" disabled="@(CurrentPage <= 1)" @onclick="OnPrevPage">
+                    ← Anterior
+                </button>
+                <span>@(((CurrentPage - 1) * PageSize) + 1)–@(Math.Min(CurrentPage * PageSize, TotalCount)) de @TotalCount</span>
+                <button class="btn-ghost" disabled="@(CurrentPage * PageSize >= TotalCount)" @onclick="OnNextPage">
+                    Siguiente →
+                </button>
+            </div>
+        }
     }
 </div>
 
@@ -70,7 +84,12 @@
     [Parameter] public int? HoveredListingId { get; set; }
     [Parameter] public bool IsCollapsed { get; set; }
     [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public int TotalCount { get; set; }
+    [Parameter] public int CurrentPage { get; set; }
+    [Parameter] public int PageSize { get; set; }
     [Parameter] public EventCallback<int> OnListingSelected { get; set; }
     [Parameter] public EventCallback<int?> OnListingHover { get; set; }
     [Parameter] public EventCallback OnToggleCollapse { get; set; }
+    [Parameter] public EventCallback OnPrevPage { get; set; }
+    [Parameter] public EventCallback OnNextPage { get; set; }
 }

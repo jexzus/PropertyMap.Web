@@ -2,6 +2,7 @@
 @rendermode InteractiveServer
 @inject IAuthService AuthService
 @inject NavigationManager Nav
+@using System.Web
 
 <PageTitle>Crear cuenta — PropertyMap</PageTitle>
 
@@ -15,18 +16,7 @@
             <div class="auth-error">@error</div>
         }
 
-        @if (success)
-        {
-            <div class="auth-success">
-                ✓ Cuenta creada. Revisá tu email para verificar tu cuenta y poder iniciar sesión.
-            </div>
-            <a href="/Account/Login" class="btn-primary auth-btn" style="text-align:center">
-                Ir al login
-            </a>
-        }
-        else
-        {
-            <div class="field-row">
+        <div class="field-row">
                 <div class="field">
                     <label class="field-label" for="nombre">Nombre</label>
                     <input id="nombre" type="text" class="field-input"
@@ -63,10 +53,9 @@
                 @(loading ? "Registrando..." : "Crear cuenta")
             </button>
 
-            <p class="auth-footer">
-                ¿Ya tenés cuenta? <a href="/Account/Login">Iniciá sesión</a>
-            </p>
-        }
+        <p class="auth-footer">
+            ¿Ya tenés cuenta? <a href="/Account/Login">Iniciá sesión</a>
+        </p>
     </div>
 </div>
 
@@ -78,7 +67,6 @@
     private string confirm = "";
     private string? error;
     private bool loading;
-    private bool success;
 
     private async Task DoRegister()
     {
@@ -98,7 +86,7 @@
         error = null;
         var (ok, err) = await AuthService.RegisterAsync(nombre, apellido, email, password, confirm);
         loading = false;
-        if (ok) success = true;
+        if (ok) Nav.NavigateTo($"/Account/VerifyEmail?Email={HttpUtility.UrlEncode(email)}");
         else error = err;
     }
 }

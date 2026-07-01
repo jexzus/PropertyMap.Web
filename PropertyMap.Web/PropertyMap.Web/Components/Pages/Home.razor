@@ -42,22 +42,14 @@
             HoveredListingId="hoveredListingId"
             IsCollapsed="isPanelCollapsed"
             IsLoading="isLoading"
+            TotalCount="_totalCount"
+            CurrentPage="_currentPage"
+            PageSize="PageSize"
             OnListingSelected="SelectListing"
             OnListingHover="HoverListing"
-            OnToggleCollapse="TogglePanel" />
-
-        @if (!isPanelCollapsed && _totalCount > 0)
-        {
-            <div class="pm-pagination">
-                <button class="btn-ghost" disabled="@(_currentPage <= 1)" @onclick="PrevPageAsync">
-                    ← Anterior
-                </button>
-                <span>Mostrando @(((_currentPage - 1) * PageSize) + 1)–@(Math.Min(_currentPage * PageSize, _totalCount)) de @_totalCount</span>
-                <button class="btn-ghost" disabled="@(_currentPage * PageSize >= _totalCount)" @onclick="NextPageAsync">
-                    Siguiente →
-                </button>
-            </div>
-        }
+            OnToggleCollapse="TogglePanel"
+            OnPrevPage="PrevPageAsync"
+            OnNextPage="NextPageAsync" />
 
         @if (!isPanelCollapsed)
         {
@@ -217,5 +209,11 @@
         if (mapView is not null) await mapView.HighlightMarker(id);
     }
 
-    private void TogglePanel() => isPanelCollapsed = !isPanelCollapsed;
+    private async Task TogglePanel()
+    {
+        isPanelCollapsed = !isPanelCollapsed;
+        // Esperar a que termine la transición CSS (--dur-normal ~300ms) antes de notificar a Mapbox
+        await Task.Delay(320);
+        await JS.InvokeVoidAsync("mapInterop.resizeMap");
+    }
 }

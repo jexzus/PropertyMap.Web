@@ -70,6 +70,55 @@ public class AuthService : IAuthService
         }
     }
 
+    public async Task<(bool Success, string? Error)> VerifyEmailAsync(string email, string token)
+    {
+        try
+        {
+            var resp = await _http.PostAsJsonAsync("api/auth/verify-email",
+                new PropertyMap.Core.DTOs.Auth.VerifyEmailRequest(email, token));
+            if (!resp.IsSuccessStatusCode)
+            {
+                var err = await resp.Content.ReadFromJsonAsync<ErrorDto>();
+                return (false, err?.Message ?? "Código inválido o expirado.");
+            }
+            return (true, null);
+        }
+        catch (Exception ex) { return (false, $"No se pudo conectar: {ex.Message}"); }
+    }
+
+    public async Task<(bool Success, string? Error)> ForgotPasswordAsync(string email)
+    {
+        try
+        {
+            var resp = await _http.PostAsJsonAsync("api/auth/forgot-password",
+                new PropertyMap.Core.DTOs.Auth.ForgotPasswordRequest(email));
+            if (!resp.IsSuccessStatusCode)
+            {
+                var err = await resp.Content.ReadFromJsonAsync<ErrorDto>();
+                return (false, err?.Message ?? "Error al procesar la solicitud.");
+            }
+            return (true, null);
+        }
+        catch (Exception ex) { return (false, $"No se pudo conectar: {ex.Message}"); }
+    }
+
+    public async Task<(bool Success, string? Error)> ResetPasswordAsync(
+        string email, string token, string newPassword, string confirmPassword)
+    {
+        try
+        {
+            var resp = await _http.PostAsJsonAsync("api/auth/reset-password",
+                new PropertyMap.Core.DTOs.Auth.ResetPasswordRequest(email, token, newPassword, confirmPassword));
+            if (!resp.IsSuccessStatusCode)
+            {
+                var err = await resp.Content.ReadFromJsonAsync<ErrorDto>();
+                return (false, err?.Message ?? "Error al restablecer la contraseña.");
+            }
+            return (true, null);
+        }
+        catch (Exception ex) { return (false, $"No se pudo conectar: {ex.Message}"); }
+    }
+
     public async Task LogoutAsync()
     {
         _tokenStore.Clear();

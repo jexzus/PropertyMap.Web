@@ -1,0 +1,87 @@
+@page "/Account/VerifyEmail"
+@rendermode InteractiveServer
+@inject IAuthService AuthService
+@inject NavigationManager Nav
+
+<PageTitle>Verificar cuenta — PropertyMap</PageTitle>
+
+<div class="auth-page">
+    <div class="auth-card">
+        <a href="/" class="auth-logo">PropertyMap</a>
+        <h1 class="auth-title">Verificar cuenta</h1>
+
+        @if (error is not null)
+        {
+            <div class="auth-error">@error</div>
+        }
+
+        @if (success)
+        {
+            <div class="auth-success">
+                ✓ ¡Cuenta verificada! Ya podés iniciar sesión.
+            </div>
+            <a href="/Account/Login" class="btn-primary auth-btn" style="text-align:center;display:block">
+                Ir al login
+            </a>
+        }
+        else
+        {
+            <p style="color:var(--color-muted);font-size:var(--text-sm);margin-bottom:var(--space-4)">
+                Ingresá el código de 6 dígitos que te enviamos a <strong>@Email</strong>.
+            </p>
+
+            <div class="field">
+                <label class="field-label" for="email-input">Email</label>
+                <input id="email-input" type="email" class="field-input"
+                       @bind="emailInput" placeholder="tu@email.com" autocomplete="email" />
+            </div>
+
+            <div class="field">
+                <label class="field-label" for="token">Código de verificación</label>
+                <input id="token" type="text" class="field-input"
+                       @bind="token" placeholder="123456"
+                       maxlength="6" inputmode="numeric" autocomplete="one-time-code" />
+            </div>
+
+            <button class="btn-primary auth-btn" @onclick="DoVerify" disabled="@loading">
+                @(loading ? "Verificando..." : "Verificar cuenta")
+            </button>
+
+            <p class="auth-footer">
+                ¿No recibiste el código? Revisá spam o <a href="/Account/Register">registrate de nuevo</a>.
+            </p>
+        }
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    private string? Email { get; set; }
+
+    private string emailInput = "";
+    private string token = "";
+    private string? error;
+    private bool loading;
+    private bool success;
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(Email))
+            emailInput = Email;
+    }
+
+    private async Task DoVerify()
+    {
+        if (string.IsNullOrWhiteSpace(emailInput) || string.IsNullOrWhiteSpace(token))
+        {
+            error = "Completá el email y el código.";
+            return;
+        }
+        loading = true;
+        error = null;
+        var (ok, err) = await AuthService.VerifyEmailAsync(emailInput.Trim(), token.Trim());
+        loading = false;
+        if (ok) success = true;
+        else error = err;
+    }
+}

@@ -32,6 +32,7 @@ public class ListingRepository(AppDbContext ctx) : IListingRepository
             .Where(l => l.Estado == EstadoPublicacion.Publicada)
             .Include(l => l.Location)
             .Include(l => l.Publisher)
+            .Include(l => l.Images.OrderBy(i => i.Orden))
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(q))

@@ -420,6 +420,10 @@ window.mapInterop = {
     this._clearClusterHighlight();
   },
 
+  resizeMap() {
+    if (this._map) this._map.resize();
+  },
+
   // ── Resize handle drag ────────────────────────────────────────────────────
   initResize(panelSelector, handleSelector) {
     const panel = document.querySelector(panelSelector);
